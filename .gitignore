@@ -1,0 +1,46 @@
+# ==== Personal data / real device artifacts — NEVER commit ====
+# This tool's whole purpose is handling personal Android backups. Anything
+# that could contain real photos, videos, WhatsApp content, manifests with
+# real paths/hashes, or real device identifiers must never enter git.
+data/
+*.crypt14
+*.crypt15
+Android_Backup_*/
+**/manifests/*.json
+**/manifests/*.csv
+**/reports/*discovery_report*
+**/reports/*backup_report*
+**/reports/*deletion_preview*
+**/reports/*deletion_report*
+**/logs/*.csv
+!backend/tests/fixtures/**
+
+# ==== Python ====
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ==== Node / frontend ====
+node_modules/
+dist/
+frontend/.vite/
+npm-debug.log*
+
+# ==== Env / secrets / local config ====
+.env
+.env.*
+*.local.json
+config.local.json
+
+# ==== IDE / OS ====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
