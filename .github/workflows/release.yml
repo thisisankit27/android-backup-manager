@@ -62,7 +62,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-desktop.txt
-          pip install pygobject
+          # PyGObject 3.52 switched to the girepository-2.0 pkg-config module.
+          # ubuntu-latest still ships gobject-introspection 1.x
+          # (libgirepository1.0-dev), so an unpinned install fails at meson
+          # configure with "Dependency 'girepository-2.0' is required but not
+          # found". Pin below that boundary until the runner image moves.
+          pip install "pygobject<3.52"
 
       - name: Build bundle
         run: python packaging/build.py

@@ -31,6 +31,9 @@ hiddenimports = (
     + ["anyio", "click", "h11", "websockets", "watchfiles"]
 )
 
+_icon_candidate = SPEC_DIR / "icon.ico"
+_WIN_ICON = _icon_candidate if (sys.platform == "win32" and _icon_candidate.is_file()) else None
+
 block_cipher = None
 
 a = Analysis(
@@ -96,7 +99,9 @@ exe = EXE(
     # GUI app: no console window on Windows. On Linux this flag is ignored,
     # and stderr still reaches the terminal when launched from one.
     console=False,
-    icon=str(SPEC_DIR / "icon.ico") if sys.platform == "win32" else None,
+    # Only when the file is actually there. PyInstaller raises FileNotFoundError
+    # for a named-but-missing icon, and there is no icon.ico in the repo yet.
+    icon=str(_WIN_ICON) if _WIN_ICON else None,
 )
 
 coll = COLLECT(
