@@ -1,10 +1,28 @@
 import { Link } from "react-router-dom";
+import { AdbSetup } from "../components/AdbSetup";
 import { fmtSize } from "../lib/format";
 import { useDevice } from "../state/device";
 
 export default function Dashboard() {
-  const { status, loading, error, refresh } = useDevice();
+  const { status, adb, loading, error, refresh } = useDevice();
   const dev = status?.device;
+
+  // A missing adb blocks everything downstream, so it replaces the page
+  // rather than sitting alongside a "not connected" panel that can't be
+  // acted on.
+  if (adb && !adb.found) {
+    return (
+      <>
+        <div className="page-head">
+          <h1>Setup Required</h1>
+          <p className="page-sub">One prerequisite is missing.</p>
+          <span className="spacer" />
+          <button onClick={refresh} disabled={loading}>Re-check</button>
+        </div>
+        <AdbSetup status={adb} onInstalled={refresh} />
+      </>
+    );
+  }
 
   return (
     <>

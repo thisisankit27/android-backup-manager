@@ -27,23 +27,35 @@ function AppIcon() {
 }
 
 function StatusBar() {
-  const { status, loading, error, refresh } = useDevice();
+  const { status, adb, loading, error, refresh } = useDevice();
   const connected = !!status?.connected;
   const dev = status?.device;
+  const adbMissing = adb ? !adb.found : false;
+
+  // A multi-line install hint truncated into a 24px bar helps nobody. When
+  // adb is missing the bar states the fact and points at the page that can
+  // actually fix it.
+  const detail = error
+    ? `Error: ${error}`
+    : adbMissing
+    ? "Android Platform Tools not installed — open Device to set this up"
+    : connected && dev
+    ? `${dev.manufacturer} ${dev.model} — Android ${dev.android_version} (SDK ${dev.sdk})`
+    : status?.reason || "";
 
   return (
     <div className="statusbar">
       <div className="statusbar-cell">
         <span className={"status-led " + (loading ? "" : connected ? "on" : "off")} />
-        {loading ? "Checking device..." : connected ? "Device connected" : "No device"}
+        {loading
+          ? "Checking..."
+          : adbMissing
+          ? "Setup required"
+          : connected
+          ? "Device connected"
+          : "No device"}
       </div>
-      <div className="statusbar-cell grow">
-        {error
-          ? `Error: ${error}`
-          : connected && dev
-          ? `${dev.manufacturer} ${dev.model} — Android ${dev.android_version} (SDK ${dev.sdk})`
-          : status?.reason || ""}
-      </div>
+      <div className="statusbar-cell grow">{detail}</div>
       {connected && dev && (
         <div className="statusbar-cell optional">{dev.serial}</div>
       )}

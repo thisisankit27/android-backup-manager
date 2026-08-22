@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.adb.errors import AdbError, AmbiguousDeviceError, ConnectionLostError, NoDeviceError
+from app.api.routes_adb import router as adb_router
 from app.api.routes_backup import router as backup_router
 from app.api.routes_deletion import router as deletion_router
 from app.api.routes_device import router as device_router
@@ -50,6 +51,7 @@ async def adb_error_handler(request: Request, exc: AdbError):
     return JSONResponse(status_code=502, content={"detail": str(exc), "error": "adb_error"})
 
 
+app.include_router(adb_router)
 app.include_router(device_router)
 app.include_router(discovery_router)
 app.include_router(backup_router)
