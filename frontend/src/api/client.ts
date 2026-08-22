@@ -80,6 +80,39 @@ export interface AdbStatus {
   env_override: string;
 }
 
+export interface ReleaseAsset {
+  name: string;
+  url: string;
+  size: number;
+}
+
+export interface LatestRelease {
+  version: string;
+  tag: string;
+  notes: string;
+  published_at: string | null;
+  html_url: string;
+  asset: ReleaseAsset | null;
+  asset_names: string[];
+  assets: ReleaseAsset[];
+}
+
+export interface UpdateState {
+  current_version: string;
+  is_release_build: boolean;
+  /** Whether the user has answered the first-run consent prompt at all. */
+  asked: boolean;
+  enabled: boolean;
+  /** False when no installer is built for this OS/architecture. */
+  supported: boolean;
+  available: boolean;
+  latest: LatestRelease | null;
+  dismissed: boolean;
+  checked_at: number | null;
+  error: string | null;
+  releases_url: string;
+}
+
 export const api = {
   adbStatus: () => req<AdbStatus>("/adb/status"),
   installAdb: () => req<{ job_id: string }>("/adb/install", { method: "POST" }),
@@ -117,6 +150,11 @@ export const api = {
   getConfig: () => req<any>("/config"),
   updateConfig: (payload: any) => req<any>("/config", { method: "PUT", body: JSON.stringify(payload) }),
   getJob: (id: string, since = 0) => req<JobStatus>(`/jobs/${id}?since=${since}`),
+  updateCheck: (force = false) => req<UpdateState>(`/update/check?force=${force}`),
+  setUpdatePreference: (enabled: boolean) =>
+    req<UpdateState>("/update/preference", { method: "POST", body: JSON.stringify({ enabled }) }),
+  dismissUpdate: (version: string) =>
+    req<UpdateState>("/update/dismiss", { method: "POST", body: JSON.stringify({ version }) }),
 };
 
 export function watchJob(

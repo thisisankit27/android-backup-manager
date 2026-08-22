@@ -94,6 +94,65 @@ body {
   min-height: 0;
 }
 
+/* --------------------------------------------------------------------------
+   INFO BAR — the strip under the title bar (update consent / update found)
+
+   Deliberately an Explorer-style information bar and not a toast or a
+   modal: it is part of the chrome, it pushes content down rather than
+   covering it, and it cannot land on top of a control mid-backup.
+   -------------------------------------------------------------------------- */
+.infobar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 5px var(--sp-3);
+  background: #fffaeb;
+  border-bottom: 1px solid #e8d18a;
+  font-size: var(--fs);
+  color: #6b5300;
+}
+.infobar.update { background: #f2f7fd; border-bottom-color: var(--selected-border); color: var(--text); }
+
+.infobar-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #c99a00;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.infobar.update .infobar-icon { background: var(--accent); }
+
+.infobar-text { flex: 1 1 240px; min-width: 0; }
+.infobar-text strong { font-weight: 600; }
+
+.infobar button, .infobar .button-link { flex: 0 0 auto; }
+
+/* Release notes expand onto their own line rather than squeezing the row. */
+.infobar-notes {
+  flex: 1 1 100%;
+  max-height: 180px;
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-2);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .navpane {
   flex: 0 0 168px;
   background: var(--panel-2);
@@ -273,6 +332,24 @@ button.link {
   background: none; border: none; height: auto; padding: 0;
   color: var(--accent); text-decoration: underline; font-size: var(--fs);
 }
+
+/* A link that opens something outside the app but belongs in a row of
+   buttons. Still an <a>, so middle-click and copy-link keep working. */
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs);
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.button-link:hover { background: var(--hover-bg); border-color: var(--accent); }
+.button-link:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
 
 input[type="text"], input[type="number"], select, textarea {
   font: inherit;
