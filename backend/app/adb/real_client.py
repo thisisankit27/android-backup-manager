@@ -12,6 +12,7 @@ from pathlib import Path
 
 from app.adb.client import AdbClient
 from app.adb.errors import AdbError, AmbiguousDeviceError, NoDeviceError
+from app.adb.locate import adb_path
 from app.adb.types import DeletionAttemptResult, DeletionOutcome, DeviceInfo, RemoteEntry
 
 
@@ -32,13 +33,13 @@ class RealAdbClient(AdbClient):
         self.serial = serial
 
     def _adb(self, *args: str) -> list[str]:
-        base = ["adb"]
+        base = [adb_path()]
         if self.serial:
             base += ["-s", self.serial]
         return base + list(args)
 
     def list_authorized_devices(self) -> list[str]:
-        result = _run(["adb", "devices", "-l"])
+        result = _run([adb_path(), "devices", "-l"])
         _check(result, "adb devices")
         lines = [l for l in result.stdout.splitlines()[1:] if l.strip()]
         return [l.split()[0] for l in lines if " device " in f" {l} "]
