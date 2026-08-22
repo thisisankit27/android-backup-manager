@@ -18,8 +18,9 @@ from app.api.routes_device import router as device_router
 from app.api.routes_discovery import router as discovery_router
 from app.api.routes_meta import router as meta_router
 from app.paths import frontend_dir
+from app.version import VERSION
 
-app = FastAPI(title="Android Backup Manager", version="0.1.0")
+app = FastAPI(title="Android Backup Manager", version=VERSION)
 
 # Local-only tool: the frontend dev server runs on localhost too, but this
 # is not a general-purpose API — CORS is restricted to loopback origins.
@@ -61,7 +62,7 @@ app.include_router(meta_router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": VERSION}
 
 
 # --------------------------------------------------------------------------

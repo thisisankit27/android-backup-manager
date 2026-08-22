@@ -69,6 +69,16 @@ jobs:
           # found". Pin below that boundary until the runner image moves.
           pip install "pygobject<3.52"
 
+      - name: Stamp version
+        run: |
+          python - <<'EOF'
+          import pathlib
+          v = "${{ needs.version.outputs.version }}"
+          f = pathlib.Path("backend/app/version.py")
+          f.write_text(f.read_text().replace('VERSION = "0.0.0-dev"', f'VERSION = "{v}"'))
+          print("stamped", v)
+          EOF
+
       - name: Build bundle
         run: python packaging/build.py
 
@@ -102,6 +112,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-desktop.txt
+
+      - name: Stamp version
+        shell: pwsh
+        run: |
+          $v = "${{ needs.version.outputs.version }}"
+          $f = "backend/app/version.py"
+          (Get-Content $f -Raw).Replace('VERSION = "0.0.0-dev"', "VERSION = `"$v`"") | Set-Content $f
+          Write-Host "stamped $v"
 
       - name: Build bundle
         run: python packaging/build.py
@@ -161,7 +179,11 @@ jobs:
             ## Requirements
 
             `adb` must be available. On Ubuntu the package pulls it in via
-            Recommends; on Windows install Google's platform-tools, and note
-            that many phones need their manufacturer's USB driver.
+            Recommends. On Windows, if it is missing the app offers to
+            download Google's official platform-tools for you on first run.
+
+            Note that many phones need their manufacturer's USB driver on
+            Windows before `adb` can see them — Google's driver covers only
+            Pixel and Nexus devices.
 
             Everything runs on your machine. Nothing is uploaded anywhere.
