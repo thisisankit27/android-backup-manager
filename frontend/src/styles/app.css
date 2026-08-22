@@ -1,52 +1,76 @@
 /* ==========================================================================
-   DESIGN SYSTEM — classic desktop utility / installer
-   Small, flat token set. Everything else in this file composes from it.
+   DESIGN SYSTEM
+
+   Shares its language with the landing page (site/index.html) on purpose:
+   someone downloads from one and opens the other, and they should look
+   like the same product. Same ink, same surfaces, same accent, same three
+   typefaces — but at application density rather than marketing scale.
+
+   Two rules this file is built around:
+
+   1. Information density is a feature. The file tree can hold ten thousand
+      rows, and reviewing what is about to be deleted is the one thing this
+      app must make easy. Rows stay compact; the space goes into the chrome
+      around them, not between them.
+
+   2. Colour carries meaning, never decoration. Green is verified and
+      nothing else. Amber is caution. Red is destructive. The accent marks
+      the thing you are meant to do next.
    ========================================================================== */
 :root {
-  /* Surfaces */
-  --bg: #f0f0f0;           /* application background */
-  --panel: #ffffff;        /* panel / list / input background */
-  --panel-2: #f6f6f7;      /* toolbar, table header, section header */
-  --panel-3: #eaeaec;      /* pressed / inset */
+  /* Surfaces — the same ladder as the landing page */
+  --ink: #0a0e14;          /* app background */
+  --surface: #10161f;      /* panels, lists */
+  --surface-2: #151d28;    /* panel headers, toolbars, table headers */
+  --surface-3: #1a2432;    /* hover */
+  --surface-4: #202b3b;    /* pressed */
 
   /* Lines */
-  --border: #b4b8bd;       /* control + panel borders */
-  --border-soft: #dfe1e3;  /* hairline separators */
-  --tree-line: #b8bcc2;    /* tree connector lines */
+  --line: #1c2532;         /* hairline separators */
+  --line-bright: #273244;  /* control borders */
+  --tree-line: #222d3d;    /* tree connectors */
 
   /* Text */
-  --text: #1a1a1a;
-  --text-dim: #5f6368;
-  --text-disabled: #9aa0a6;
+  --text: #e8eef6;
+  --muted: #8496ab;        /* blue-biased grey, chosen not inherited */
+  --faint: #5b6b80;        /* disabled, placeholder, secondary metadata */
 
-  /* Interaction (classic Explorer selection colors) */
-  --accent: #0067c0;
-  --hover-bg: #e5f3ff;
-  --selected-bg: #cce8ff;
-  --selected-border: #99d1ff;
-  --focus: #0067c0;
+  /* Accent + semantics. Green means verified, and only verified. */
+  --accent: #2f81f7;
+  --accent-hover: #4a92ff;
+  --accent-dim: rgba(47, 129, 247, 0.14);
+  --accent-line: rgba(47, 129, 247, 0.42);
+  --verify: #3fb950;
+  --verify-dim: rgba(63, 185, 80, 0.13);
+  --warn: #d29922;
+  --warn-dim: rgba(210, 153, 34, 0.12);
+  --danger: #f85149;
+  --danger-dim: rgba(248, 81, 73, 0.12);
 
-  /* Status */
-  --green: #107c41;
-  --amber: #8a6d00;
-  --red: #b42318;
+  /* Type */
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
 
   /* Metrics */
-  --row-h: 22px;           /* tree row height (fixed: virtualizer depends on it) */
-  --control-h: 24px;
-  --indent: 16px;          /* tree indent per depth level */
-  --radius: 2px;
+  --row-h: 26px;           /* tree row height (fixed: the virtualizer depends on it) */
+  --control-h: 32px;
+  --indent: 18px;
+  --r: 8px;                /* panels */
+  --r-sm: 6px;             /* controls */
 
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-
-  --fs-sm: 11px;
-  --fs: 12px;
-  --fs-md: 13px;
-
-  --mono: ui-monospace, Consolas, "Courier New", monospace;
+  --sp-5: 24px;
+  --sp-6: 32px;
 }
 
 * { box-sizing: border-box; }
@@ -55,15 +79,31 @@ html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--ink);
   color: var(--text);
-  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-family: var(--body);
   font-size: var(--fs);
-  line-height: 1.45;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
+::selection { background: var(--accent-dim); }
+
+/* Scrollbars belong to the surface, not to a bright system stripe laid
+   over a dark app. */
+* { scrollbar-color: var(--line-bright) transparent; scrollbar-width: thin; }
+*::-webkit-scrollbar { width: 11px; height: 11px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line-bright);
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #33425a; background-clip: content-box; }
+
 /* ==========================================================================
-   APPLICATION CHROME — titlebar / nav pane / content / status bar
+   APP SHELL
    ========================================================================== */
 .app-shell {
   height: 100%;
@@ -72,79 +112,285 @@ body {
   overflow: hidden;
 }
 
+/* --------------------------------------------------------------------------
+   Top bar — brand, live device state, secondary navigation
+   -------------------------------------------------------------------------- */
 .titlebar {
   flex: 0 0 auto;
-  height: 30px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.titlebar-icon { flex: 0 0 auto; display: block; }
+.titlebar-brand {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.titlebar-sep { flex: 1 1 auto; }
+
+/* The live device chip. The single most useful fact on screen is whether
+   the phone is actually attached right now, so it is never more than a
+   glance away regardless of which page you are on. */
+.device-chip {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  height: 30px;
   padding: 0 var(--sp-3);
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--fs);
-  font-weight: 600;
+  border: 1px solid var(--line-bright);
+  border-radius: 99px;
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  max-width: 340px;
 }
-.titlebar-icon { flex: 0 0 auto; }
-.titlebar-sep { flex: 1; }
-.titlebar-meta { font-weight: 400; color: var(--text-dim); font-size: var(--fs-sm); }
+.device-chip.on { border-color: rgba(63, 185, 80, 0.34); }
+.device-chip strong { color: var(--text); font-weight: 500; }
+.device-chip .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.titlebar-nav { display: flex; gap: var(--sp-1); }
+.titlebar-nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: var(--fs);
+}
+.titlebar-nav a:hover { color: var(--text); background: var(--surface-2); }
+.titlebar-nav a.active { color: var(--text); background: var(--surface-3); }
+
+/* --------------------------------------------------------------------------
+   WORKFLOW RAIL
+
+   Why this replaced a flat list of pages: the four things you do here are
+   one journey with real dependencies. You cannot back up what you have not
+   discovered, and you must not free space without a verified backup. A
+   sidebar hides that, and people lose their place between pages. Each step
+   states whether it is done, ready, in progress or blocked — and a blocked
+   step says what is blocking it instead of silently doing nothing.
+   -------------------------------------------------------------------------- */
+.rail {
+  flex: 0 0 auto;
+  display: flex;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  /* overflow-y must be stated. Setting overflow-x alone computes
+     overflow-y to auto, and a single pixel of rounding in the row height
+     is then enough to paint a scrollbar down the side of the rail. */
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.rail-step {
+  flex: 1 1 0;
+  min-width: 168px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 11px var(--sp-4);
+  border: none;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  height: auto;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+}
+.rail-step:last-child { border-right: none; }
+.rail-step:hover:not(:disabled) { background: var(--surface-3); }
+.rail-step:disabled { cursor: not-allowed; background: transparent; }
+
+/* The marker doubles as the state: number, tick, or lock. */
+.rail-mark {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-bright);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.rail-text { display: grid; gap: 1px; min-width: 0; }
+.rail-title {
+  font-size: var(--fs);
+  font-weight: 500;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rail-sub {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail-step.done .rail-mark { border-color: rgba(63, 185, 80, 0.4); background: var(--verify-dim); color: var(--verify); }
+.rail-step.done .rail-title { color: var(--text); }
+.rail-step.done .rail-sub { color: var(--verify); }
+
+.rail-step.ready .rail-mark { border-color: var(--accent-line); color: var(--accent); }
+.rail-step.ready .rail-title { color: var(--text); }
+
+.rail-step.active { background: var(--surface-3); }
+.rail-step.active .rail-mark { border-color: var(--accent); background: var(--accent); color: #fff; }
+.rail-step.active .rail-title { color: var(--text); font-weight: 600; }
+.rail-step.active .rail-sub { color: var(--accent); }
+/* Current step reads as current from the edge, rather than via a colour
+   change that would fight the done/ready/blocked colours. */
+.rail-step.active::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.rail-step.locked .rail-mark { color: var(--faint); }
+.rail-step.locked .rail-title { color: var(--faint); }
+
+/* --------------------------------------------------------------------------
+   Content + status bar
+   -------------------------------------------------------------------------- */
 .app-body {
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
 }
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+}
+/* One column for everything on a page, so panels, notices and footers line
+   up down both edges.
 
-/* --------------------------------------------------------------------------
-   INFO BAR — the strip under the title bar (update consent / update found)
+   flex: 0 0 auto matters more than it looks. The column is a flex
+   container, so without it every child is shrinkable -- and on any page
+   tall enough to scroll, the browser squeezes all of them at once. Panels
+   collapse to slivers with their contents clipped, which is exactly what
+   happened on Confirm Backup. The file tree opts back into growing. */
+.content > * {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
 
-   Deliberately an Explorer-style information bar and not a toast or a
-   modal: it is part of the chrome, it pushes content down rather than
-   covering it, and it cannot land on top of a control mid-backup.
-   -------------------------------------------------------------------------- */
+.statusbar {
+  flex: 0 0 auto;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-5);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.statusbar-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusbar-cell.grow { flex: 1 1 auto; min-width: 0; }
+.statusbar-cell.right { margin-left: auto; }
+.statusbar-cell.optional { font-family: var(--mono); font-size: var(--fs-xs); }
+
+.status-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+  flex: 0 0 auto;
+}
+.status-led.on { background: var(--verify); box-shadow: 0 0 0 3px var(--verify-dim); }
+.status-led.off { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-dim); }
+
+/* ==========================================================================
+   INFO BAR — update consent / update available
+
+   Chrome, not a toast: it pushes content down instead of covering it, so
+   it can never land on top of a control while a backup is running.
+   ========================================================================== */
 .infobar {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-2);
-  padding: 5px var(--sp-3);
-  background: #fffaeb;
-  border-bottom: 1px solid #e8d18a;
+  gap: var(--sp-2) var(--sp-3);
+  padding: 9px var(--sp-5);
+  background: var(--warn-dim);
+  border-bottom: 1px solid rgba(210, 153, 34, 0.28);
   font-size: var(--fs);
-  color: #6b5300;
 }
-.infobar.update { background: #f2f7fd; border-bottom-color: var(--selected-border); color: var(--text); }
+.infobar.update { background: var(--accent-dim); border-bottom-color: var(--accent-line); }
 
 .infobar-icon {
   flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
-  background: #c99a00;
-  color: #fff;
-  font-size: 10px;
+  background: var(--warn);
+  color: var(--ink);
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 1;
 }
-.infobar.update .infobar-icon { background: var(--accent); }
+.infobar.update .infobar-icon { background: var(--accent); color: #fff; }
 
-.infobar-text { flex: 1 1 240px; min-width: 0; }
+.infobar-text { flex: 1 1 260px; min-width: 0; }
 .infobar-text strong { font-weight: 600; }
 
-.infobar button, .infobar .button-link { flex: 0 0 auto; }
-
-/* Download progress: a thin rule across the width of the bar, matching
-   the chunky bordered .progress used on the backup and cleanup pages. */
+.infobar-notes {
+  flex: 1 1 100%;
+  max-height: 190px;
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-3);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-sm);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .infobar-progress {
   flex: 1 1 100%;
-  height: 6px;
+  height: 4px;
   margin-top: var(--sp-1);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--surface);
+  border-radius: 99px;
   overflow: hidden;
 }
 .infobar-progress > span {
@@ -153,552 +399,620 @@ body {
   background: var(--accent);
   transition: width 0.15s linear;
 }
-
-.infobar-error {
-  flex: 1 1 100%;
-  margin-top: var(--sp-1);
-  color: #8c2018;
-}
+.infobar-error { flex: 1 1 100%; margin-top: var(--sp-1); color: var(--danger); }
 .infobar-error a { color: inherit; }
 
-/* Release notes expand onto their own line rather than squeezing the row. */
-.infobar-notes {
-  flex: 1 1 100%;
-  max-height: 180px;
-  margin: var(--sp-1) 0 0;
-  padding: var(--sp-2);
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  font-family: var(--mono);
-  font-size: var(--fs-sm);
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.navpane {
-  flex: 0 0 168px;
-  background: var(--panel-2);
-  border-right: 1px solid var(--border);
-  padding: var(--sp-1) 0;
-  overflow-y: auto;
-}
-.navpane-group {
-  padding: var(--sp-2) var(--sp-3) var(--sp-1);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.navpane a {
-  display: block;
-  padding: 3px var(--sp-3);
-  color: var(--text);
-  text-decoration: none;
-  font-size: var(--fs);
-  border-left: 3px solid transparent;
-}
-.navpane a:hover { background: var(--hover-bg); }
-.navpane a.active {
-  background: var(--selected-bg);
-  border-left-color: var(--accent);
-  font-weight: 600;
-}
-.navpane a:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
-
-.content {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-}
-/* Only the tree grows; fixed-height chrome keeps its intrinsic size. */
-.content > .page-head,
-.content > .toolbar,
-.content > .statstrip,
-.content > .notice,
-.content > .panel,
-.content > .placeholder,
-.content > .wizard-footer { flex: 0 0 auto; }
-
-/* Bottom application status bar */
-.statusbar {
-  flex: 0 0 auto;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-}
-.statusbar-cell {
-  padding: 0 var(--sp-3);
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-right: 1px solid var(--border-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.statusbar-cell.grow { flex: 1; border-right: none; }
-.statusbar-cell.right { border-right: none; border-left: 1px solid var(--border-soft); }
-.status-led {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--text-disabled); flex: 0 0 auto;
-}
-.status-led.on { background: var(--green); }
-.status-led.off { background: var(--red); }
-
 /* ==========================================================================
-   PAGE HEADER — compact strip, not a hero
+   PAGE HEAD
    ========================================================================== */
 .page-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--sp-3);
-  padding-bottom: var(--sp-2);
-  margin-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
 }
-.page-head h1 { font-size: var(--fs-md); font-weight: 600; margin: 0; }
-.page-head .page-sub { font-size: var(--fs); color: var(--text-dim); margin: 0; }
-.page-head .spacer { flex: 1; }
+.page-head h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.page-sub { margin: 0; color: var(--muted); font-size: var(--fs); }
+.page-head .spacer { flex: 1 1 auto; }
 
 /* ==========================================================================
-   PANEL — bordered box with optional section header
+   PANELS
    ========================================================================== */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  margin-bottom: var(--sp-4);
+  overflow: hidden;
 }
 .panel-head {
-  padding: 4px var(--sp-3);
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border-soft);
-  font-size: var(--fs);
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  padding: 10px var(--sp-4);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.panel-head .spacer { flex: 1; }
-.panel-body { padding: var(--sp-3); }
+.panel-head .spacer { flex: 1 1 auto; }
+.panel-body { padding: var(--sp-4); }
 .panel-body.flush { padding: 0; }
-.panel.plain { border: none; background: none; margin-bottom: var(--sp-3); }
+.panel-body.scroll-y { max-height: 320px; overflow-y: auto; }
 
 /* ==========================================================================
-   TOOLBAR — traditional button strip
+   TOOLBAR
    ========================================================================== */
 .toolbar {
   display: flex;
   align-items: center;
-  gap: var(--sp-1);
-  padding: var(--sp-1) var(--sp-2);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+  gap: var(--sp-2);
   flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  margin-bottom: var(--sp-3);
 }
-.toolbar .sep {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border-soft);
-  margin: 2px var(--sp-1);
+.toolbar .spacer { flex: 1 1 auto; }
+.toolbar-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
-.toolbar .spacer { flex: 1; }
-.toolbar-label { font-size: var(--fs); color: var(--text-dim); }
-.toolbar input[type="text"] { width: 200px; }
-/* A panel that sits directly under a toolbar joins with it */
-.toolbar + .panel, .toolbar + .tree-viewport {
-  border-radius: 0 0 var(--radius) var(--radius);
-  margin-top: 0;
+.toolbar .sep { width: 1px; height: 18px; background: var(--line-bright); flex: 0 0 auto; }
+/* Inputs default to full width, which is right in a form and wrong in a
+   toolbar -- there it pushes every button onto its own line. */
+.toolbar input[type="text"], .toolbar select {
+  width: auto;
+  flex: 1 1 200px;
+  min-width: 150px;
+}
+
+/* A toolbar sitting directly on top of what it controls joins to it. */
+.toolbar + .panel,
+.toolbar + .tree-viewport {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: -1px;
+}
+.toolbar:has(+ .panel),
+.toolbar:has(+ .tree-viewport),
+.toolbar:has(+ .statstrip) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
 }
 
 /* ==========================================================================
    CONTROLS
    ========================================================================== */
 button {
-  font: inherit;
+  font-family: var(--body);
   font-size: var(--fs);
+  font-weight: 500;
   height: var(--control-h);
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel-2);
+  padding: 0 14px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
   color: var(--text);
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  transition: background 0.12s, border-color 0.12s;
 }
-button:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--accent); }
-button:active:not(:disabled) { background: var(--panel-3); }
-button:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
-button:disabled { color: var(--text-disabled); background: var(--panel-2); cursor: default; }
+button:hover:not(:disabled) { background: var(--surface-3); border-color: #3a4a63; }
+button:active:not(:disabled) { background: var(--surface-4); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { color: var(--faint); background: var(--surface); border-color: var(--line); cursor: not-allowed; }
 
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-button.primary:hover:not(:disabled) { background: #0058a6; border-color: #0058a6; }
-button.primary:disabled { background: var(--panel-2); border-color: var(--border); color: var(--text-disabled); font-weight: 400; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.primary:disabled { background: var(--surface); border-color: var(--line); color: var(--faint); font-weight: 500; }
 
-button.danger { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
-button.danger:hover:not(:disabled) { background: #99201a; border-color: #99201a; }
-button.danger:disabled { background: var(--panel-2); border-color: var(--border); color: var(--text-disabled); font-weight: 400; }
+button.danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+button.danger:hover:not(:disabled) { background: #ff6259; border-color: #ff6259; }
+button.danger:disabled { background: var(--surface); border-color: var(--line); color: var(--faint); font-weight: 500; }
 
 button.link {
-  background: none; border: none; height: auto; padding: 0;
-  color: var(--accent); text-decoration: underline; font-size: var(--fs);
+  background: none;
+  border: none;
+  height: auto;
+  padding: 0;
+  color: var(--accent);
+  font-size: var(--fs);
+  font-weight: 500;
 }
+button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
+button.link:disabled { background: none; }
 
-/* A link that opens something outside the app but belongs in a row of
-   buttons. Still an <a>, so middle-click and copy-link keep working. */
+/* A link that leaves the app but belongs in a row of buttons. Still an
+   <a>, so middle-click and copy-link keep working. */
 .button-link {
   display: inline-flex;
   align-items: center;
-  font-size: var(--fs);
+  gap: var(--sp-2);
   height: var(--control-h);
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel-2);
+  padding: 0 14px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
   color: var(--text);
+  font-size: var(--fs);
+  font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
 }
-.button-link:hover { background: var(--hover-bg); border-color: var(--accent); }
-.button-link:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
+.button-link:hover { background: var(--surface-3); border-color: #3a4a63; }
+.button-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 input[type="text"], input[type="number"], select, textarea {
-  font: inherit;
+  font-family: var(--body);
   font-size: var(--fs);
   height: var(--control-h);
-  padding: 0 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel);
-  color: var(--text);
+  padding: 0 10px;
   width: 100%;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--text);
 }
-textarea { height: auto; padding: 4px 6px; }
-input[type="text"]:focus, select:focus, textarea:focus {
+input::placeholder { color: var(--faint); }
+input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
-input[type="text"]:disabled { background: var(--panel-3); color: var(--text-disabled); }
+input:disabled { color: var(--faint); background: var(--surface); }
 
 input[type="checkbox"] {
-  width: 13px; height: 13px; margin: 0;
+  width: 15px;
+  height: 15px;
   accent-color: var(--accent);
   cursor: pointer;
   flex: 0 0 auto;
 }
-input[type="checkbox"]:disabled { cursor: default; }
 
-/* Field rows: label above control, compact */
-.field { margin-bottom: var(--sp-3); }
+a { color: var(--accent); }
+
+.field { margin-bottom: var(--sp-4); }
 .field:last-child { margin-bottom: 0; }
-.field > label { display: block; margin-bottom: 2px; color: var(--text-dim); font-size: var(--fs); }
-.field .hint { margin-top: 2px; color: var(--text-dim); font-size: var(--fs-sm); }
-.check-row { display: flex; align-items: flex-start; gap: 6px; margin-bottom: var(--sp-2); }
+.field > label {
+  display: block;
+  margin-bottom: var(--sp-2);
+  color: var(--text);
+  font-size: var(--fs);
+  font-weight: 500;
+}
+.field .hint { margin-top: var(--sp-2); }
+.hint { color: var(--muted); font-size: var(--fs-sm); }
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.check-row:last-child { margin-bottom: 0; }
+.check-row input[type="checkbox"] { margin-top: 2px; }
 .check-row label { cursor: pointer; }
 
-/* Property grid — classic two-column key/value list */
+/* ==========================================================================
+   PROPERTY GRID — key/value facts
+   ========================================================================== */
 .propgrid { width: 100%; border-collapse: collapse; font-size: var(--fs); }
 .propgrid th, .propgrid td {
   text-align: left;
-  padding: 3px var(--sp-2);
-  border-bottom: 1px solid var(--border-soft);
+  padding: 8px var(--sp-3);
+  border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
-.propgrid th {
-  width: 190px;
-  font-weight: 400;
-  color: var(--text-dim);
-  background: none;
-  text-transform: none;
-  font-size: var(--fs);
-  border-right: 1px solid var(--border-soft);
-}
+.propgrid th { width: 220px; font-weight: 400; color: var(--muted); background: none; }
 .propgrid tr:last-child th, .propgrid tr:last-child td { border-bottom: none; }
-.propgrid tr:hover td, .propgrid tr:hover th { background: transparent; }
-
-/* Wizard footer — right-aligned action row, like a setup dialog */
-.wizard-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding-top: var(--sp-3);
-  margin-top: auto;
-  border-top: 1px solid var(--border);
-}
-.wizard-footer .spacer { flex: 1; }
+.propgrid td { color: var(--text); }
 
 /* ==========================================================================
-   TABLES / LISTS
+   DATA TABLES
    ========================================================================== */
-table.grid { width: 100%; border-collapse: collapse; font-size: var(--fs); }
-table.grid th, table.grid td {
-  text-align: left;
-  padding: 3px var(--sp-2);
-  border-bottom: 1px solid var(--border-soft);
-  white-space: nowrap;
-}
-table.grid th {
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
+.grid { width: 100%; border-collapse: collapse; font-size: var(--fs); }
+.grid thead th {
   position: sticky;
   top: 0;
-}
-table.grid td.wrap { white-space: normal; }
-table.grid tbody tr:hover td { background: var(--hover-bg); }
-table.grid .right { text-align: right; }
-
-.scroll-y { max-height: 340px; overflow-y: auto; }
-
-.mono { font-family: var(--mono); font-size: var(--fs); }
-.dim { color: var(--text-dim); }
-.right { text-align: right; }
-.nowrap { white-space: nowrap; }
-
-/* ==========================================================================
-   BADGES — small flat status tags
-   ========================================================================== */
-.badge {
-  display: inline-block;
-  padding: 0 5px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  font-size: var(--fs-sm);
+  z-index: 1;
+  text-align: left;
+  padding: 9px var(--sp-3);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs);
   font-weight: 600;
-  line-height: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.grid tbody td {
+  padding: 8px var(--sp-3);
+  border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
-.badge.connected, .badge.verified { background: #e6f4ea; color: var(--green); border-color: #b7dfc4; }
-.badge.disconnected, .badge.failed { background: #fce8e6; color: var(--red); border-color: #f3bcb6; }
-.badge.protected { background: #fef7e0; color: var(--amber); border-color: #e8d18a; }
-.badge.eligible { background: #e8f0fe; color: var(--accent); border-color: #b8d4f5; }
-.badge.skipped { background: #eceded; color: var(--text-dim); border-color: #d7d9da; }
+.grid tbody tr:last-child td { border-bottom: none; }
+.grid tbody tr:hover td { background: var(--surface-2); }
+.grid .right, .propgrid .right { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ==========================================================================
-   STAT STRIP — inline Explorer-style summary segments
+   BADGES
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.badge.connected, .badge.verified, .badge.eligible {
+  background: var(--verify-dim);
+  border-color: rgba(63, 185, 80, 0.32);
+  color: var(--verify);
+}
+.badge.disconnected, .badge.failed {
+  background: var(--danger-dim);
+  border-color: rgba(248, 81, 73, 0.32);
+  color: var(--danger);
+}
+.badge.protected, .badge.skipped, .badge.warn {
+  background: var(--warn-dim);
+  border-color: rgba(210, 153, 34, 0.32);
+  color: var(--warn);
+}
+.badge.info {
+  background: var(--accent-dim);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   STAT STRIP — the numbers that decide whether to continue
    ========================================================================== */
 .statstrip {
   display: flex;
   flex-wrap: wrap;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel-2);
-  margin-bottom: var(--sp-3);
-  font-size: var(--fs);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  margin-bottom: var(--sp-4);
+  overflow: hidden;
 }
 .statstrip .stat {
-  padding: 3px var(--sp-3);
-  border-right: 1px solid var(--border-soft);
+  flex: 1 1 130px;
+  padding: var(--sp-3) var(--sp-4);
+  border-right: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 .statstrip .stat:last-child { border-right: none; }
-.statstrip .stat strong { font-weight: 700; margin-right: 4px; }
-/* joins to a toolbar directly above it */
-.toolbar + .statstrip { border-top: none; border-radius: 0; margin-bottom: 0; }
+.statstrip .stat strong {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.statstrip .stat.good strong { color: var(--verify); }
+.statstrip .stat.warn strong { color: var(--warn); }
+.statstrip .stat.bad strong { color: var(--danger); }
+.toolbar + .statstrip { border-top: none; border-radius: 0 0 var(--r) var(--r); }
 
 /* ==========================================================================
-   NOTICES — thin left-accent bars
+   NOTICES
    ========================================================================== */
 .notice {
   display: flex;
-  gap: var(--sp-2);
-  padding: 6px var(--sp-3);
-  margin-bottom: var(--sp-3);
-  border: 1px solid var(--border);
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-4);
+  border: 1px solid var(--line-bright);
   border-left-width: 3px;
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   font-size: var(--fs);
-  background: var(--panel);
+  color: var(--text);
 }
-.notice.info { border-left-color: var(--accent); background: #f2f7fd; }
-.notice.warn { border-left-color: #c99a00; background: #fffaeb; border-color: #e8d18a; color: #6b5300; }
-.notice.error { border-left-color: var(--red); background: #fdf3f2; border-color: #f3bcb6; color: #8c2018; }
-.notice strong { font-weight: 600; }
-
-/* Empty / loading states — quiet, centered, utilitarian */
-.placeholder {
-  padding: var(--sp-4);
-  text-align: center;
-  color: var(--text-dim);
-  font-size: var(--fs);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.placeholder.inline { border: none; background: none; padding: var(--sp-3); text-align: left; }
+.notice strong { color: var(--text); font-weight: 600; }
+.notice.info { border-left-color: var(--accent); background: var(--accent-dim); border-color: var(--accent-line); }
+.notice.warn { border-left-color: var(--warn); background: var(--warn-dim); border-color: rgba(210, 153, 34, 0.3); }
+.notice.error { border-left-color: var(--danger); background: var(--danger-dim); border-color: rgba(248, 81, 73, 0.3); }
 
 /* ==========================================================================
-   PROGRESS — chunky, square, bordered
+   EMPTY / BLOCKED STATES
+
+   An empty panel that only says "nothing here" wastes the one moment the
+   user is actively asking what to do. These name what is missing and offer
+   the action that fixes it.
    ========================================================================== */
-.progress {
-  height: 16px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+.placeholder {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs);
 }
-.progress-fill { height: 100%; background: var(--accent); transition: width 0.15s linear; }
+.placeholder.inline { padding: var(--sp-4); text-align: left; }
+
+.empty {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: center;
+  padding: var(--sp-6) var(--sp-5);
+  text-align: center;
+}
+.empty-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-bright);
+  color: var(--faint);
+}
+.empty h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.empty .empty-text { max-width: 54ch; color: var(--muted); font-size: var(--fs); }
+.empty .empty-text p { margin: 0; }
+.empty .actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--sp-1);
+}
+.empty .actions a { text-decoration: none; }
+
+/* Numbered guidance, for the places where the next move is a sequence. */
+.steplist { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2); counter-reset: s; }
+/* Positioned marker rather than a grid column. As a grid, every inline
+   element inside the item -- a <strong>, a <span> -- becomes a grid item
+   of its own and is thrown onto a line by itself. */
+.steplist li {
+  position: relative;
+  padding-left: 32px;
+  min-height: 20px;
+  color: var(--muted);
+  font-size: var(--fs);
+  text-align: left;
+}
+.steplist li strong { color: var(--text); font-weight: 600; }
+.steplist li::before {
+  counter-increment: s;
+  content: counter(s);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-bright);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   PROGRESS
+   ========================================================================== */
+.progress { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.15s linear;
+}
 
 pre.report {
   margin: 0;
-  padding: var(--sp-2);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--sp-4);
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
   font-family: var(--mono);
-  font-size: var(--fs);
-  max-height: 380px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 340px;
   overflow: auto;
-  white-space: pre;
 }
 
 /* ==========================================================================
-   FILE TREE — first-class installer-style tree control
-   Rows are a fixed height (--row-h); the virtualizer depends on that.
+   WIZARD FOOTER — the action row that ends a page
+   ========================================================================== */
+.wizard-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+.wizard-footer .spacer { flex: 1 1 auto; }
+.wizard-footer a { text-decoration: none; }
+
+/* ==========================================================================
+   FILE TREE
+
+   The densest surface in the app, and the reason row height is a token
+   rather than a literal: the virtualizer measures against --row-h, so this
+   and ROW_H in FileTree.tsx have to agree.
    ========================================================================== */
 .tree-viewport {
-  /* Grows to fill the remaining content height so the list shows as many
-     rows as the window allows; scrolls internally past that. */
   flex: 1 1 auto;
-  min-height: 200px;
+  min-height: 180px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
   overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   outline: none;
-  position: relative;
 }
-.tree-viewport:focus-visible { border-color: var(--accent); }
+.tree-viewport:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
 .tree-row {
   display: flex;
   align-items: center;
   height: var(--row-h);
-  padding-right: var(--sp-2);
+  padding-right: var(--sp-3);
+  font-size: var(--fs);
   white-space: nowrap;
   cursor: default;
   user-select: none;
 }
-.tree-row:hover { background: var(--hover-bg); }
-.tree-row.selected { background: var(--selected-bg); }
-.tree-viewport:focus-within .tree-row.selected { box-shadow: inset 0 0 0 1px var(--selected-border); }
-.tree-row.disabled { color: var(--text-disabled); }
+.tree-row:hover { background: var(--surface-2); }
+.tree-row.selected { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
+.tree-row.disabled { color: var(--faint); }
 
-/* Indent guides: one per ancestor depth, drawing the vertical connector */
-.tree-guide {
-  width: var(--indent);
-  height: 100%;
-  flex: 0 0 auto;
-  position: relative;
-}
+.tree-guide { width: var(--indent); flex: 0 0 auto; position: relative; height: 100%; }
 .tree-guide.line::before {
   content: "";
   position: absolute;
-  left: 7px; top: 0; bottom: 0;
-  border-left: 1px dotted var(--tree-line);
-}
-/* The elbow at the row's own depth: vertical stub + horizontal tick */
-.tree-elbow {
-  width: var(--indent);
+  left: 9px;
+  top: 0;
   height: 100%;
-  flex: 0 0 auto;
-  position: relative;
+  border-left: 1px solid var(--tree-line);
 }
+.tree-elbow { width: var(--indent); flex: 0 0 auto; position: relative; height: 100%; }
 .tree-elbow::before {
   content: "";
   position: absolute;
-  left: 7px; top: 0;
-  height: calc(var(--row-h) / 2);
-  border-left: 1px dotted var(--tree-line);
+  left: 9px;
+  top: 0;
+  height: 50%;
+  border-left: 1px solid var(--tree-line);
 }
 .tree-elbow.continues::before { height: 100%; }
 .tree-elbow::after {
   content: "";
   position: absolute;
-  left: 7px; top: calc(var(--row-h) / 2);
+  left: 9px;
+  top: 50%;
   width: 8px;
-  border-top: 1px dotted var(--tree-line);
+  border-top: 1px solid var(--tree-line);
 }
 
 .tree-toggle {
-  width: 16px; height: 100%;
+  width: var(--indent);
+  height: var(--row-h);
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-dim);
-  font-size: 8px;
-  cursor: pointer;
-  background: none;
-  border: none;
+  display: grid;
+  place-items: center;
   padding: 0;
-}
-.tree-toggle span { display: block; transition: transform 0.1s; }
-.tree-toggle.open span { transform: rotate(90deg); }
-.tree-toggle:hover { color: var(--accent); }
-.tree-spacer { width: 16px; flex: 0 0 auto; }
-
-.tree-check { margin: 0 4px 0 2px; }
-.tree-icon { flex: 0 0 auto; margin-right: 5px; }
-
-.tree-label {
-  font-size: var(--fs);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  border: none;
+  background: none;
+  color: var(--muted);
   cursor: pointer;
+  font-size: 9px;
 }
+.tree-toggle:hover:not(:disabled) { background: none; color: var(--accent); }
+.tree-toggle span { display: block; transition: transform 0.12s; }
+.tree-toggle.open span { transform: rotate(90deg); }
+.tree-spacer { width: var(--indent); flex: 0 0 auto; }
+
+.tree-check { margin: 0 var(--sp-2) 0 var(--sp-1); }
+.tree-icon { flex: 0 0 auto; margin-right: 6px; color: var(--muted); display: flex; }
+.tree-row:hover .tree-icon, .tree-row.selected .tree-icon { color: var(--accent); }
+
+.tree-label { overflow: hidden; text-overflow: ellipsis; }
 .tree-root-label { font-weight: 600; }
-.tree-path { margin-left: 6px; color: var(--text-dim); font-size: var(--fs-sm); }
+.tree-path { margin-left: var(--sp-2); color: var(--faint); font-family: var(--mono); font-size: var(--fs-xs); }
 .tree-meta {
   margin-left: auto;
-  padding-left: var(--sp-3);
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
+  padding-left: var(--sp-4);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
-.tree-row .badge { margin-left: 6px; }
+.tree-row .badge { margin-left: var(--sp-2); }
 
 /* ==========================================================================
-   RESPONSIVE — stays a tool; nav becomes a tab strip, meta columns drop
+   UTILITIES
    ========================================================================== */
-@media (max-width: 860px) {
-  .app-body { flex-direction: column; }
-  .navpane {
-    flex: 0 0 auto;
-    display: flex;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 0;
-  }
-  .navpane-group { display: none; }
-  .navpane a {
-    border-left: none;
-    border-bottom: 3px solid transparent;
-    padding: 5px var(--sp-3);
-  }
-  .navpane a.active { border-left: none; border-bottom-color: var(--accent); }
-  .content { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
-  .propgrid th { width: 130px; }
+.mono { font-family: var(--mono); font-size: var(--fs-sm); }
+.dim { color: var(--muted); }
+.spacer { flex: 1 1 auto; }
+
+/* ==========================================================================
+   RESPONSIVE
+
+   Desktop-first: the packaged window has a 900px minimum. These handle a
+   narrowed window and a browser during development, not phones.
+   ========================================================================== */
+/* Ordered by what is least useful to lose. The product name goes before
+   the device label does: a chip reduced to a bare coloured dot looks
+   broken, and which phone is attached is the more useful of the two. */
+@media (max-width: 980px) {
+  .content, .titlebar, .statusbar, .infobar { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .titlebar-brand { display: none; }
+  .propgrid th { width: 150px; }
 }
 
-@media (max-width: 620px) {
-  .tree-path, .tree-meta { display: none; }
-  .toolbar input[type="text"] { width: 100%; }
+@media (max-width: 760px) {
+  .rail-step { min-width: 132px; padding: 10px var(--sp-3); }
+  .rail-sub { display: none; }
   .statusbar-cell.optional { display: none; }
+  .tree-path { display: none; }
+}
+
+/* Below this the status bar is still showing the same device state, so
+   the chip is duplication rather than information. */
+@media (max-width: 620px) {
+  .device-chip { display: none; }
+  .rail-text { display: none; }
+  .rail-step { flex: 0 0 auto; min-width: 0; }
+  .tree-meta { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
 }

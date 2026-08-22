@@ -19,7 +19,7 @@ export interface FolderNode {
 
 /** Row height in px. Must match --row-h in app.css: the virtualizer maps
  * scroll offset to row index arithmetically, so the two cannot drift. */
-export const ROW_H = 22;
+export const ROW_H = 26;
 
 /** Rebuilds the on-device subfolder structure under a root directory from
  * each file's absolute path, so nested folders (e.g. Media/Images/Sent)
@@ -401,7 +401,7 @@ export function FileTree({
                   {isFolder && node?.badge && <span className="badge skipped">{node.badge}</span>}
                   {file?.is_trashed && <span className="badge skipped">trashed</span>}
                   {file?.crypt14_kind === "current" && <span className="badge protected">current DB</span>}
-                  {file?.crypt14_kind === "historical" && <span className="badge eligible">historical DB</span>}
+                  {file?.crypt14_kind === "historical" && <span className="badge info">historical DB</span>}
 
                   <span className="tree-meta">
                     {isFolder && stat
