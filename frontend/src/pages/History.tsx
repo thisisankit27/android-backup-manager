@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { EmptyState, IconClock } from "../components/EmptyState";
 import { fmtCount, fmtSize } from "../lib/format";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -63,8 +65,25 @@ export default function History() {
         <span className="toolbar-label">{fmtCount(shown.length)} record(s)</span>
       </div>
 
-      <div className="panel" style={{ borderRadius: "0 0 2px 2px", marginTop: 0 }}>
+      <div className="panel">
         <div className="panel-body flush" style={{ maxHeight: 460, overflow: "auto" }}>
+          {events !== null && shown.length === 0 ? (
+            <EmptyState
+              icon={IconClock}
+              title={typeFilter ? "No records of that type" : "Nothing has happened yet"}
+              actions={
+                typeFilter ? (
+                  <button onClick={() => setTypeFilter("")}>Show everything</button>
+                ) : (
+                  <Link to="/discover"><button className="primary">Scan the device</button></Link>
+                )
+              }
+            >
+              {typeFilter
+                ? "Every other kind of record is still here — clear the filter to see them."
+                : "Every scan, backup and deletion this tool runs is written down here, so you can always check what happened and when."}
+            </EmptyState>
+          ) : (
           <table className="grid">
             <thead>
               <tr><th>When</th><th>Type</th><th>Device</th><th>Details</th></tr>
@@ -78,11 +97,6 @@ export default function History() {
                   <td className="dim">{details(e)}</td>
                 </tr>
               ))}
-              {events !== null && shown.length === 0 && (
-                <tr><td colSpan={4} className="dim" style={{ padding: 16, textAlign: "center" }}>
-                  {typeFilter ? "No records of that type." : "No activity recorded yet."}
-                </td></tr>
-              )}
               {events === null && !error && (
                 <tr><td colSpan={4} className="dim" style={{ padding: 16, textAlign: "center" }}>
                   Loading...
@@ -90,6 +104,7 @@ export default function History() {
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </>

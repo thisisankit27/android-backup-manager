@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, watchJob } from "../api/client";
+import { Link } from "react-router-dom";
+import { EmptyState, IconArchive } from "../components/EmptyState";
 import { fmtCount, fmtSize } from "../lib/format";
 
 const REQUIRED_PHRASE = "DELETE VERIFIED BACKUPS";
@@ -20,7 +22,14 @@ export default function Cleanup() {
 
   useEffect(() => {
     api.history()
-      .then((h) => setKnownBackups(h.filter((e) => e.type === "backup")))
+      .then((h) => {
+        const backups = h.filter((e) => e.type === "backup");
+        setKnownBackups(backups);
+        // History arrives newest-first. Preselecting the most recent backup
+        // is what people almost always mean, and it means this page never
+        // opens on an empty path box with no way to guess what goes in it.
+        if (backups.length > 0) setBackupDir((current) => current || backups[0].backup_dir);
+      })
       .catch(() => {});
   }, []);
 
@@ -80,7 +89,7 @@ export default function Cleanup() {
   if (step === "pick") {
     return (
       <>
-        {head("Step 1 of 3 — choose a verified backup to check the device against.")}
+        {head("Choose a verified backup to check the device against.")}
 
         {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
 
@@ -92,39 +101,47 @@ export default function Cleanup() {
         </div>
 
         <div className="panel">
-          <div className="panel-head">Backup Directory</div>
-          <div className="panel-body">
-            <div className="field">
-              <label htmlFor="bdir">Directory to verify the device against</label>
-              <input
-                id="bdir"
-                type="text"
-                placeholder="/home/you/Desktop/Android_Backup_..."
-                value={backupDir}
-                onChange={(e) => setBackupDir(e.target.value)}
-              />
-            </div>
+          <div className="panel-head">
+            Your Backups
+            <span className="spacer" />
+            {knownBackups.length > 0 && (
+              <span className="badge info">{fmtCount(knownBackups.length)}</span>
+            )}
           </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-head">Known Backups</div>
           <div className="panel-body flush scroll-y">
             {knownBackups.length === 0 ? (
-              <div className="placeholder inline">No backups recorded yet.</div>
+              <EmptyState
+                icon={IconArchive}
+                title="There is no verified backup to check against"
+                actions={<Link to="/backup"><button className="primary">Back up first</button></Link>}
+              >
+                Nothing can be deleted from the phone until its files exist somewhere else
+                and have been proven identical. Make a backup, and this page will be able
+                to work out what is safe to remove.
+              </EmptyState>
             ) : (
               <table className="grid">
                 <thead>
-                  <tr><th>When</th><th className="right">Verified</th><th>Directory</th><th /></tr>
+                  <tr><th>When</th><th className="right">Verified</th><th>Folder</th><th /></tr>
                 </thead>
                 <tbody>
                   {knownBackups.map((b) => (
                     <tr key={b.id}>
                       <td className="mono">{b.timestamp}</td>
-                      <td className="right">{b.verified}/{b.files}</td>
+                      <td className="right">
+                        {b.verified === b.files ? (
+                          <span className="badge verified">{b.verified}/{b.files}</span>
+                        ) : (
+                          <span className="badge warn">{b.verified}/{b.files}</span>
+                        )}
+                      </td>
                       <td className="mono">{b.backup_dir}</td>
                       <td className="right">
-                        <button onClick={() => setBackupDir(b.backup_dir)}>Use</button>
+                        {b.backup_dir === backupDir ? (
+                          <span className="badge info">SELECTED</span>
+                        ) : (
+                          <button onClick={() => setBackupDir(b.backup_dir)}>Select</button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -134,10 +151,35 @@ export default function Cleanup() {
           </div>
         </div>
 
+        <div className="panel">
+          <div className="panel-head">Or Point At A Folder</div>
+          <div className="panel-body">
+            <div className="field">
+              <label htmlFor="bdir">Backup folder to verify the device against</label>
+              <input
+                id="bdir"
+                type="text"
+                placeholder="/home/you/Desktop/Android_Backup_..."
+                value={backupDir}
+                onChange={(e) => setBackupDir(e.target.value)}
+              />
+              <div className="hint">
+                Only needed for a backup made on another machine, or one this app has no
+                record of.
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="wizard-footer">
+          <span className="dim">
+            {backupDir
+              ? "Every file will be re-hashed on the device before anything is deleted."
+              : "Choose a backup to continue."}
+          </span>
           <span className="spacer" />
           <button className="primary" onClick={runPreview} disabled={!backupDir}>
-            Run Fresh Verification &gt;
+            Verify against this backup
           </button>
         </div>
       </>
@@ -149,7 +191,7 @@ export default function Cleanup() {
   if (step === "previewing") {
     return (
       <>
-        {head("Step 2 of 3 — re-verifying every file against the device and the backup.")}
+        {head("Re-verifying every file against the device and the backup.")}
         <div className="panel">
           <div className="panel-head">Verifying</div>
           <div className="panel-body">
@@ -170,7 +212,7 @@ export default function Cleanup() {
   if (step === "preview" && preview) {
     return (
       <>
-        {head("Step 2 of 3 — review exactly what would be deleted.")}
+        {head("Review exactly what would be deleted.")}
 
         {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
 
@@ -260,7 +302,7 @@ export default function Cleanup() {
     const phraseOk = phraseInput === REQUIRED_PHRASE;
     return (
       <>
-        {head("Step 3 of 3 — explicit authorization required.")}
+        {head("Explicit authorization required.")}
 
         <div className="notice error">
           <span>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { AdbSetup } from "../components/AdbSetup";
+import { EmptyState, IconPhone } from "../components/EmptyState";
 import { fmtSize } from "../lib/format";
 import { useDevice } from "../state/device";
 
@@ -27,10 +28,10 @@ export default function Dashboard() {
   return (
     <>
       <div className="page-head">
-        <h1>Device</h1>
-        <p className="page-sub">Connection state and recent activity.</p>
+        <h1>Connect</h1>
+        <p className="page-sub">Everything else starts here.</p>
         <span className="spacer" />
-        <button onClick={refresh} disabled={loading}>{loading ? "Checking..." : "Refresh"}</button>
+        <button onClick={refresh} disabled={loading}>{loading ? "Checking..." : "Re-check"}</button>
       </div>
 
       {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
@@ -60,14 +61,20 @@ export default function Dashboard() {
               </tbody>
             </table>
           ) : (
-            <div className="dim">
-              {status?.reason || "Checking..."}
-              <ol style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                <li>Connect the phone over USB.</li>
-                <li>Enable USB debugging in Developer Options.</li>
-                <li>Accept the "Allow USB debugging?" prompt on the device.</li>
+            <EmptyState icon={IconPhone} title="No phone is connected">
+              <ol className="steplist" style={{ marginTop: 4 }}>
+                <li>Connect the phone to this computer with a USB cable.</li>
+                <li>
+                  On the phone, turn on <strong>USB debugging</strong> in Developer
+                  Options.
+                </li>
+                <li>
+                  Tap <strong>Allow</strong> on the "Allow USB debugging?" prompt that
+                  appears on the phone.
+                </li>
+                <li>Press Re-check below.</li>
               </ol>
-            </div>
+            </EmptyState>
           )}
         </div>
       </div>
@@ -107,11 +114,16 @@ export default function Dashboard() {
       </div>
 
       <div className="wizard-footer">
+        {!status?.connected && (
+          <span className="dim">Connect a phone to continue.</span>
+        )}
         <span className="spacer" />
-        <Link to="/history"><button>View History</button></Link>
-        <Link to="/discover">
-          <button className="primary" disabled={!status?.connected}>Discover Device...</button>
-        </Link>
+        <Link to="/history"><button>View history</button></Link>
+        {status?.connected ? (
+          <Link to="/discover"><button className="primary">Scan this device</button></Link>
+        ) : (
+          <button className="primary" disabled>Scan this device</button>
+        )}
       </div>
     </>
   );

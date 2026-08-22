@@ -9,6 +9,7 @@ import {
   filterTree,
   FolderNode,
 } from "../components/FileTree";
+import { EmptyState, IconSearch } from "../components/EmptyState";
 import { fmtCount, fmtSize } from "../lib/format";
 import { getLastDiscoveryId, setLastDiscoveryId } from "../state/discovery";
 
@@ -156,12 +157,19 @@ export default function Backup() {
   if (!discoveryId) {
     return (
       <>
-        <div className="page-head"><h1>Back Up</h1></div>
-        <div className="placeholder">
-          No discovery loaded. Run a read-only scan first.
-          <div style={{ marginTop: 12 }}>
-            <Link to="/discover"><button className="primary">Go to Discover</button></Link>
-          </div>
+        <div className="page-head">
+          <h1>Back Up</h1>
+          <p className="page-sub">Choose what to copy across, then verify every file.</p>
+        </div>
+        <div className="panel">
+          <EmptyState
+            icon={IconSearch}
+            title="Nothing has been discovered yet"
+            actions={<Link to="/discover"><button className="primary">Scan the device</button></Link>}
+          >
+            There is nothing to choose from until the device has been scanned. The scan is
+            read-only — it reads names, sizes and hashes, and changes nothing on the phone.
+          </EmptyState>
         </div>
       </>
     );
@@ -180,7 +188,7 @@ export default function Backup() {
     return (
       <>
         <div className="page-head"><h1>Back Up</h1></div>
-        <div className="placeholder">Loading discovery...</div>
+        <div className="panel"><div className="placeholder">Loading discovery...</div></div>
       </>
     );
   }
@@ -301,7 +309,7 @@ export default function Backup() {
       <>
         <div className="page-head">
           <h1>Confirm Backup</h1>
-          <p className="page-sub">Step 2 of 2 — review the selection before copying.</p>
+          <p className="page-sub">Review the selection before copying.</p>
         </div>
 
         {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
@@ -415,7 +423,7 @@ export default function Backup() {
     <>
       <div className="page-head">
         <h1>Select Files</h1>
-        <p className="page-sub">Step 1 of 2 — choose what to copy off the device.</p>
+        <p className="page-sub">Choose what to copy off the device.</p>
         <span className="spacer" />
         <span className="dim">
           {discovery.categories.length} categories · {fmtCount(totalFiles)} files
@@ -451,7 +459,7 @@ export default function Backup() {
         emptyLabel={needle ? `No files match "${filter}".` : "No files discovered."}
       />
 
-      <div className="statstrip" style={{ borderTop: "none", borderRadius: "0 0 2px 2px" }}>
+      <div className="statstrip" style={{ borderTop: "none", borderRadius: "0 0 var(--r) var(--r)" }}>
         <div className="stat"><strong>{fmtCount(totals.includedCount)}</strong>selected</div>
         <div className="stat"><strong>{fmtSize(totals.includedSize)}</strong>to copy</div>
         <div className="stat"><strong>{fmtCount(totals.excludedCount)}</strong>excluded</div>
