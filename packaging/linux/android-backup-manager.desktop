@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Android Backup Manager
+GenericName=Android Backup Utility
+Comment=Back up files from an Android phone and verify every copy
+Exec=/opt/android-backup-manager/android-backup-manager
+Icon=android-backup-manager
+Terminal=false
+Categories=Utility;System;Archiving;
+Keywords=android;backup;adb;phone;photos;
+StartupNotify=true

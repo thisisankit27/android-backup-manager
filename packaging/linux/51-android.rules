@@ -1,0 +1,40 @@
+# udev rules for Android devices in adb mode.
+#
+# Without these, /dev/bus/usb nodes are root-only and `adb devices` reports
+# the phone as "no permissions" unless adb is run with sudo. Running a tool
+# that deletes files as root is exactly what we do not want, so the package
+# installs these instead.
+#
+# MODE 0664 + GROUP plugdev: any member of plugdev (which the desktop user
+# is, by default, on Ubuntu) can talk to the device.
+#
+# Vendor IDs below cover the common handset makers. If a device is missing,
+# find its ID with `lsusb` and add a line in the same form.
+
+# Google / Pixel / Nexus
+SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Motorola
+SUBSYSTEM=="usb", ATTR{idVendor}=="22b8", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Samsung
+SUBSYSTEM=="usb", ATTR{idVendor}=="04e8", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Xiaomi
+SUBSYSTEM=="usb", ATTR{idVendor}=="2717", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# OnePlus / Oppo
+SUBSYSTEM=="usb", ATTR{idVendor}=="2a70", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="22d9", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Realme / vivo
+SUBSYSTEM=="usb", ATTR{idVendor}=="2d95", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Huawei
+SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# LG
+SUBSYSTEM=="usb", ATTR{idVendor}=="1004", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Sony
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fce", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# HTC
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bb4", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Asus
+SUBSYSTEM=="usb", ATTR{idVendor}=="0b05", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Lenovo
+SUBSYSTEM=="usb", ATTR{idVendor}=="17ef", MODE="0664", GROUP="plugdev", TAG+="uaccess"
+# Nothing
+SUBSYSTEM=="usb", ATTR{idVendor}=="2d95", MODE="0664", GROUP="plugdev", TAG+="uaccess"
