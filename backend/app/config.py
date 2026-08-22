@@ -22,6 +22,15 @@ class Settings:
     )
     hash_algorithm: str = "sha256"  # fixed; not user-changeable at runtime, exposed for transparency only
 
+    # Tri-state on purpose. None means the user has never been asked, and
+    # while it is None no update check runs at all -- this app tells people
+    # nothing leaves their machine, so the first outbound request has to be
+    # one they agreed to. True/False is their answer, changeable in Options.
+    update_check_enabled: bool | None = None
+    #: Version whose update banner the user waved away; cleared implicitly
+    #: when a newer version than that one appears.
+    update_dismissed_version: str = ""
+
 
 def load_settings() -> Settings:
     if CONFIG_PATH.exists():
