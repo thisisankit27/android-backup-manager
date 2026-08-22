@@ -92,13 +92,22 @@ def main() -> int:
         print(f"{APP_NAME}: backend did not start in time.", file=sys.stderr)
         return 1
 
-    webview.create_window(
+    window = webview.create_window(
         APP_NAME,
         base_url,
         width=WINDOW_W,
         height=WINDOW_H,
         min_size=(MIN_W, MIN_H),
     )
+
+    # The update flow needs to be able to close the app from a request
+    # handler: on Windows the installer cannot replace files this process
+    # holds open. The backend never imports webview itself, so the way to
+    # do that is handed to it from here.
+    from app.updater import shutdown
+
+    shutdown.register(window.destroy)
+
     webview.start()
 
     # webview.start() blocks until the window closes; tell uvicorn to wind

@@ -59,5 +59,17 @@ class JobManager:
         with self._lock:
             return self._jobs.get(job_id)
 
+    def active_kinds(self, exclude: tuple[str, ...] = ()) -> list[str]:
+        """Kinds of job currently running.
+
+        Used to refuse an update while real work is in flight: this app
+        deletes photos, and a new version must never arrive underneath a
+        backup or a deletion that is halfway done.
+        """
+        with self._lock:
+            return sorted(
+                {j.kind for j in self._jobs.values() if j.status == "running" and j.kind not in exclude}
+            )
+
 
 jobs = JobManager()
