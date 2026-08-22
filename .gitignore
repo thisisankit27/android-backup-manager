@@ -34,6 +34,12 @@ frontend/.vite/
 npm-debug.log*
 *.tsbuildinfo
 
+# ==== Desktop packaging build artifacts ====
+# `dist/` is already ignored above (it covers both frontend/dist and the
+# PyInstaller output). `build/` is PyInstaller's work directory.
+build/
+packaging/installer-output/
+
 # ==== Env / secrets / local config ====
 .env
 .env.*
