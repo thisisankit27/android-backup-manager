@@ -83,3 +83,42 @@ def test_run_on_linux_keeps_the_previous_call_shape(monkeypatch):
     assert "creationflags" not in seen
     assert "startupinfo" not in seen
     assert seen["capture_output"] is True
+
+
+def test_adb_output_is_decoded_as_utf8_on_every_platform(monkeypatch):
+    """adb speaks UTF-8 everywhere; the locale must not get a say.
+
+    Left to the locale, Windows decodes with cp1252 and mangles every
+    non-ASCII filename -- which then fails to match a real file when the
+    path is handed back to `adb pull`.
+    """
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        seen.update(kwargs)
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    for platform in ("linux", "darwin"):
+        seen.clear()
+        monkeypatch.setattr(real_client.sys, "platform", platform)
+        real_client._run(["adb", "devices"])
+        assert seen["encoding"] == "utf-8", platform
+        assert seen["errors"] == "surrogateescape", platform
+
+
+def test_non_ascii_path_round_trips_back_to_adb():
+    """Paths are not merely displayed -- they are sent back to adb to pull
+    and to delete -- so the decode has to be reversible."""
+    original = "/storage/emulated/0/DCIM/Camera/café-🌅-写真.jpg".encode("utf-8")
+
+    decoded = original.decode("utf-8", errors="surrogateescape")
+    assert decoded.encode("utf-8", errors="surrogateescape") == original
+
+    # And bytes that are not valid UTF-8 at all still survive intact, which
+    # `errors="replace"` would silently destroy.
+    broken = b"/storage/emulated/0/DCIM/bad-\xff\xfe-name.jpg"
+    assert broken.decode("utf-8", errors="surrogateescape").encode(
+        "utf-8", errors="surrogateescape"
+    ) == broken

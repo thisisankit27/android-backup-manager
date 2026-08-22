@@ -53,6 +53,19 @@ def _run(cmd: list[str], timeout: float | None = None) -> subprocess.CompletedPr
         cmd,
         capture_output=True,
         text=True,
+        # adb speaks UTF-8 on every platform. Without pinning it, text=True
+        # decodes with the locale encoding -- UTF-8 on Linux, but typically
+        # cp1252 on Windows -- so any non-ASCII filename comes back mangled,
+        # and the adb pull built from it then matches no real file. cp1252
+        # maps almost every byte to something, so it corrupts quietly rather
+        # than raising: the backup reports success having skipped the file.
+        #
+        # surrogateescape, not replace: these strings are handed straight
+        # back to adb as paths to pull and to delete, so bytes that are not
+        # valid UTF-8 have to round-trip unchanged rather than collapse into
+        # a placeholder.
+        encoding="utf-8",
+        errors="surrogateescape",
         timeout=timeout,
         **_hidden_console_kwargs(),
     )
