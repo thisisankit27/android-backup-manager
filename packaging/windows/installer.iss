@@ -40,7 +40,11 @@ WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 DisableProgramGroupPage=yes
+; Shown only if the repo actually has a LICENSE. Naming a missing file here
+; is a hard ISCC compile error, which would fail the Windows release build.
+#if FileExists(AddBackslash(SourcePath) + "..\..\LICENSE")
 LicenseFile=..\..\LICENSE
+#endif
 UninstallDisplayIcon={app}\{#AppExeName}
 
 [Languages]
