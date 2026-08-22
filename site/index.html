@@ -23,9 +23,10 @@
 <style>
 /* ===========================================================================
    Design tokens
-   Committed single dark theme: the product is a light-UI desktop tool, so a
-   dark page lets the real screenshots carry the page. Accent is derived from
-   the app's own Explorer blue (#0067c0), brightened for a dark ground.
+   Committed single dark theme, shared with the application itself
+   (frontend/src/styles/app.css) so the page and the product people
+   download look like one thing. These tokens are the source; the app
+   mirrors them at application density.
    =========================================================================== */
 :root{
   --ink:#0A0E14;
@@ -305,7 +306,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
           <span class="shot-title">Android Backup Manager — Select Files</span>
         </div>
         <img src="assets/app-select-files.png" width="1280" height="820"
-             alt="The app showing a file tree of discovered folders on a phone, with checkboxes for Camera, Screenshots, WhatsApp media and Downloads." />
+             alt="The app showing a workflow rail across the top — Connect, Discover, Back Up, Free Space — above a file tree of folders discovered on a phone, with checkboxes for Camera, Screenshots, WhatsApp media and Downloads, and a running total of files and size selected." />
       </figure>
     </div>
   </section>
@@ -416,7 +417,7 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
           <span class="shot-title">Confirm Backup</span>
         </div>
         <img src="assets/app-confirm-backup.png" width="1280" height="820"
-             alt="The confirmation screen listing files selected, total size, destination folder and which categories are included or excluded." />
+             alt="The confirmation screen listing files selected, total size, the destination folder and which categories are included or excluded, with a reminder that nothing is copied until Start Backup is pressed." />
       </figure>
     </div>
   </section>
