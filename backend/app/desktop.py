@@ -66,11 +66,18 @@ def main() -> int:
     # style invocations and error paths don't require a display or GUI stack.
     import webview
 
+    # Imported as an object rather than passed to uvicorn as the import
+    # string "app.main:app". A PyInstaller bundle has no importable `app`
+    # package on disk for uvicorn's importlib lookup to find, so the string
+    # form raises ModuleNotFoundError once frozen. A direct import is also
+    # what lets PyInstaller's analysis see the dependency at build time.
+    from app.main import app as fastapi_app
+
     port = _free_port()
     base_url = f"http://127.0.0.1:{port}"
 
     config = uvicorn.Config(
-        "app.main:app",
+        fastapi_app,
         host="127.0.0.1",
         port=port,
         log_level="warning",
