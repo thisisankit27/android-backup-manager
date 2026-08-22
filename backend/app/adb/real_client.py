@@ -8,6 +8,7 @@ is shlex.quote()'d before being placed there.
 """
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 from app.adb.client import AdbClient
@@ -16,8 +17,45 @@ from app.adb.locate import adb_path
 from app.adb.types import DeletionAttemptResult, DeletionOutcome, DeviceInfo, RemoteEntry
 
 
+def _hidden_console_kwargs() -> dict:
+    """subprocess kwargs that keep adb's console window off the screen.
+
+    The packaged app is a GUI process (``console=False`` in app.spec), so it
+    owns no console. When a GUI process on Windows starts a console program
+    — and adb is one — Windows allocates a brand new console window for it.
+
+    Every adb call goes through _run(), and the heavy operations call it once
+    per file: one `adb pull` per file on backup, one `adb shell` per file on
+    cleanup. Without this, a ten-thousand-file backup flashes ten thousand
+    console windows and makes the machine unusable while it runs.
+
+    CREATE_NO_WINDOW is what actually suppresses it; the STARTUPINFO/SW_HIDE
+    pair is belt-and-braces for the cases where a child process asks for a
+    window of its own anyway.
+
+    Returns an empty dict off Windows: these flags do not exist there, and
+    passing them is an error rather than a no-op.
+    """
+    if sys.platform != "win32":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return {
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+        "startupinfo": startupinfo,
+    }
+
+
 def _run(cmd: list[str], timeout: float | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        **_hidden_console_kwargs(),
+    )
 
 
 def _check(result: subprocess.CompletedProcess, context: str) -> None:
