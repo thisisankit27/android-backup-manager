@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, watchJob } from "../api/client";
+import { setLastDiscoveryId } from "../state/discovery";
 
 export default function Discover() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
@@ -19,6 +20,7 @@ export default function Discover() {
         (finalStatus, result, err) => {
           if (finalStatus === "done") {
             setStatus("done");
+            setLastDiscoveryId(result.discovery_id);
             navigate(`/backup?discovery=${result.discovery_id}`);
           } else {
             setStatus("error");
