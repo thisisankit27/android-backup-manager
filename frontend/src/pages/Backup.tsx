@@ -1,49 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, Category, DiscoveredFile, DiscoveryResult, watchJob } from "../api/client";
+import {
+  allFolderKeys,
+  buildFolderTree,
+  FileStateMap,
+  FileTree,
+  filterTree,
+  FolderNode,
+} from "../components/FileTree";
+import { fmtCount, fmtSize } from "../lib/format";
 import { getLastDiscoveryId, setLastDiscoveryId } from "../state/discovery";
-
-type FileStateMap = Record<string, string>;
-
-function fmtSize(n: number): string {
-  if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
-  if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(1)} MB`;
-  if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
-  return `${n} B`;
-}
 
 function categoryStats(cat: Category, states: FileStateMap) {
   let includedCount = 0, includedSize = 0;
   for (const f of cat.files) {
     if (states[f.path] === "INCLUDE") { includedCount++; includedSize += f.size; }
   }
-  return { includedCount, includedSize, total: cat.files.length, totalSize: cat.files.reduce((s, f) => s + f.size, 0) };
+  return { includedCount, includedSize, total: cat.files.length };
 }
 
 export default function Backup() {
   const [params, setParams] = useSearchParams();
-  // The sidebar links to a bare /backup with no query param, so fall back to
-  // the last discovery this client saw rather than forcing a fresh scan.
   const discoveryId = params.get("discovery") || getLastDiscoveryId();
 
   const [discovery, setDiscovery] = useState<DiscoveryResult | null>(null);
   const [states, setStates] = useState<FileStateMap>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [filterText, setFilterText] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const [step, setStep] = useState<"select" | "review" | "running" | "done">("select");
   const [selectionSummary, setSelectionSummary] = useState<any>(null);
   const [destParent, setDestParent] = useState("");
-  const [progress, setProgress] = useState<{ done: number; total: number; phase: string }>({ done: 0, total: 0, phase: "" });
+  const [progress, setProgress] = useState({ done: 0, total: 0, phase: "" });
   const [backupResult, setBackupResult] = useState<any>(null);
-  const [backupDir, setBackupDir] = useState<string>("");
+  const [backupDir, setBackupDir] = useState("");
 
   useEffect(() => {
     if (!discoveryId) return;
     setLastDiscoveryId(discoveryId);
-    // Put the id back in the URL so the page stays bookmarkable/shareable
-    // even when it was restored from storage.
     if (!params.get("discovery")) setParams({ discovery: discoveryId }, { replace: true });
     api.getDiscovery(discoveryId).then((d) => {
       setDiscovery(d);
@@ -65,31 +61,73 @@ export default function Backup() {
     return { includedCount, includedSize, excludedCount, excludedSize };
   }, [discovery, states]);
 
-  if (!discoveryId) return <p>No discovery selected. Go to <b>Discover</b> first.</p>;
-  if (error) return <div className="error-box">{error}</div>;
-  if (!discovery) return <p>Loading discovery...</p>;
+  /** One root node per discovered category — the tree's top-level directories. */
+  const roots = useMemo<FolderNode[]>(() => {
+    if (!discovery) return [];
+    return discovery.categories.map((cat) =>
+      buildFolderTree(
+        cat.id,
+        cat.label,
+        cat.remote_dir,
+        cat.files,
+        cat.default_include ? undefined : "excluded by default"
+      )
+    );
+  }, [discovery]);
 
-  const setCategoryState = (cat: Category, value: string) => {
+  const needle = filter.trim().toLowerCase();
+  const displayRoots = useMemo(() => {
+    if (!needle) return roots;
+    return roots.map((r) => filterTree(r, needle)).filter((r): r is FolderNode => r !== null);
+  }, [roots, needle]);
+
+  // While filtering, show every surviving branch expanded so matches are visible.
+  const effectiveExpanded = useMemo(() => {
+    if (!needle) return expanded;
+    return Object.fromEntries(allFolderKeys(displayRoots).map((k) => [k, true]));
+  }, [needle, displayRoots, expanded]);
+
+  const setFilesState = (files: DiscoveredFile[], value: string) => {
     setStates((prev) => {
       const next = { ...prev };
-      for (const f of cat.files) if (f.default_state !== "INACCESSIBLE") next[f.path] = value;
+      for (const f of files) if (f.default_state !== "INACCESSIBLE") next[f.path] = value;
       return next;
     });
   };
 
-  const setFileState = (f: DiscoveredFile, value: string) => {
-    setStates((prev) => ({ ...prev, [f.path]: value }));
+  const setAll = (value: string) => {
+    if (!discovery) return;
+    setStates((prev) => {
+      const next = { ...prev };
+      for (const cat of discovery.categories)
+        for (const f of cat.files) if (f.default_state !== "INACCESSIBLE") next[f.path] = value;
+      return next;
+    });
   };
 
+  const expandAll = () =>
+    setExpanded(Object.fromEntries(allFolderKeys(roots).map((k) => [k, true])));
+  const collapseAll = () => setExpanded({});
+
   const doReview = async () => {
-    const summary = await api.freezeSelection(discoveryId, states);
-    setSelectionSummary(summary);
-    setStep("review");
+    if (!discoveryId) return;
+    setError(null);
+    try {
+      const summary = await api.freezeSelection(discoveryId, states);
+      setSelectionSummary(summary);
+      setStep("review");
+    } catch (e: any) {
+      setError(e.message);
+    }
   };
 
   const doStartBackup = async () => {
+    setError(null);
     setStep("running");
-    const { job_id, backup_dir } = await api.startBackup(selectionSummary.selection_id, destParent || undefined);
+    const { job_id, backup_dir } = await api.startBackup(
+      selectionSummary.selection_id,
+      destParent || undefined
+    );
     setBackupDir(backup_dir);
     watchJob(
       job_id,
@@ -107,23 +145,76 @@ export default function Backup() {
           setStep("done");
         } else {
           setError(err);
+          setStep("review");
         }
       }
     );
   };
 
-  if (step === "running") {
-    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  /* ---------------------------------------------------------------- gates */
+
+  if (!discoveryId) {
     return (
       <>
-        <h2>Backing up...</h2>
-        <div className="card">
-          <div>{progress.phase} — {progress.done}/{progress.total} files</div>
-          <div className="progress-bar"><div className="progress-bar-fill" style={{ width: `${pct}%` }} /></div>
+        <div className="page-head"><h1>Back Up</h1></div>
+        <div className="placeholder">
+          No discovery loaded. Run a read-only scan first.
+          <div style={{ marginTop: 12 }}>
+            <Link to="/discover"><button className="primary">Go to Discover</button></Link>
+          </div>
         </div>
       </>
     );
   }
+
+  if (error && !discovery) {
+    return (
+      <>
+        <div className="page-head"><h1>Back Up</h1></div>
+        <div className="notice error"><span><strong>Error.</strong> {error}</span></div>
+      </>
+    );
+  }
+
+  if (!discovery) {
+    return (
+      <>
+        <div className="page-head"><h1>Back Up</h1></div>
+        <div className="placeholder">Loading discovery...</div>
+      </>
+    );
+  }
+
+  const totalFiles = discovery.categories.reduce((n, c) => n + c.files.length, 0);
+
+  /* ------------------------------------------------------------- running */
+
+  if (step === "running") {
+    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+    return (
+      <>
+        <div className="page-head">
+          <h1>Backing Up</h1>
+          <p className="page-sub">Copying and verifying — do not disconnect the device.</p>
+        </div>
+        <div className="panel">
+          <div className="panel-head">Progress<span className="spacer" /><span className="dim">{pct}%</span></div>
+          <div className="panel-body">
+            <div className="progress"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+            <table className="propgrid" style={{ marginTop: 12 }}>
+              <tbody>
+                <tr><th>Phase</th><td>{progress.phase || "starting..."}</td></tr>
+                <tr><th>Files</th><td>{fmtCount(progress.done)} / {fmtCount(progress.total)}</td></tr>
+                <tr><th>Destination</th><td className="mono">{backupDir}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  /* ---------------------------------------------------------------- done */
 
   if (step === "done" && backupResult) {
     const entries = backupResult.manifest.entries as any[];
@@ -131,170 +222,255 @@ export default function Backup() {
     const failed = entries.length - verified;
     return (
       <>
-        <h2>Backup complete</h2>
-        <div className="summary-bar">
-          <div className="stat"><strong>{entries.length}</strong>considered</div>
-          <div className="stat"><strong className="badge verified" style={{ fontSize: 18 }}>{verified}</strong>verified</div>
-          <div className="stat"><strong className={failed ? "badge failed" : ""} style={{ fontSize: 18 }}>{failed}</strong>failed</div>
+        <div className="page-head">
+          <h1>Backup Complete</h1>
+          <p className="page-sub">Every copy was hash-verified against the source.</p>
+        </div>
+
+        <div className="statstrip">
+          <div className="stat"><strong>{fmtCount(entries.length)}</strong>considered</div>
+          <div className="stat"><strong>{fmtCount(verified)}</strong>verified</div>
+          <div className="stat"><strong>{fmtCount(failed)}</strong>failed</div>
           <div className="stat"><strong>{backupResult.manifest.duplicate_groups.length}</strong>duplicate groups</div>
         </div>
-        <div className="card">
-          <div className="dim">Backup directory</div>
-          <div className="mono">{backupDir}</div>
+
+        <div className="panel">
+          <div className="panel-head">Result</div>
+          <div className="panel-body">
+            <table className="propgrid">
+              <tbody>
+                <tr><th>Backup directory</th><td className="mono">{backupDir}</td></tr>
+                <tr>
+                  <th>Verification</th>
+                  <td>
+                    {failed === 0
+                      ? <span className="badge verified">all {fmtCount(verified)} files verified</span>
+                      : <span className="badge failed">{fmtCount(failed)} file(s) failed</span>}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
         {failed > 0 && (
-          <div className="card">
-            <h3 style={{ marginTop: 0 }}>Failed files</h3>
-            <table><tbody>
-              {entries.filter((e) => e.verification_status !== "verified").map((e) => (
-                <tr key={e.source_path}><td className="mono">{e.source_path}</td><td className="dim">{e.error}</td></tr>
-              ))}
-            </tbody></table>
+          <div className="panel">
+            <div className="panel-head">Failed Files</div>
+            <div className="panel-body flush scroll-y">
+              <table className="grid">
+                <thead><tr><th>Path</th><th>Error</th></tr></thead>
+                <tbody>
+                  {entries.filter((e) => e.verification_status !== "verified").map((e) => (
+                    <tr key={e.source_path}>
+                      <td className="mono">{e.source_path}</td>
+                      <td className="dim">{e.error}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
-        <pre className="report">{backupResult.manifest.report_txt}</pre>
-        <p className="dim">Deletion is a separate step. Go to the <b>Cleanup</b> page when you're ready to review what can safely be removed from the device.</p>
+
+        <div className="panel">
+          <div className="panel-head">Report</div>
+          <div className="panel-body flush">
+            <pre className="report" style={{ border: "none" }}>{backupResult.manifest.report_txt}</pre>
+          </div>
+        </div>
+
+        <div className="notice info">
+          <span>
+            Deletion is a separate, explicitly-authorized step. Nothing is removed from the
+            device unless you go to <strong>Cleanup</strong> and confirm there.
+          </span>
+        </div>
+
+        <div className="wizard-footer">
+          <span className="spacer" />
+          <Link to="/cleanup"><button>Go to Cleanup...</button></Link>
+        </div>
       </>
     );
   }
 
+  /* -------------------------------------------------------------- review */
+
   if (step === "review") {
-    const included = totals.includedCount;
     return (
       <>
-        <h2>Review Backup</h2>
-        <div className="warning-banner" style={{ borderColor: "var(--accent)", background: "rgba(79,140,255,0.08)", color: "var(--text)" }}>
-          Nothing will be copied until you click <b>Start Backup</b> below.
+        <div className="page-head">
+          <h1>Confirm Backup</h1>
+          <p className="page-sub">Step 2 of 2 — review the selection before copying.</p>
         </div>
-        <div className="card">
-          <div className="summary-bar">
-            <div className="stat"><strong>{included}</strong>files selected</div>
-            <div className="stat"><strong>{fmtSize(totals.includedSize)}</strong>total size</div>
-            <div className="stat"><strong>{totals.excludedCount}</strong>excluded</div>
+
+        {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
+
+        <div className="notice info">
+          <span>Nothing is copied until you press <strong>Start Backup</strong>.</span>
+        </div>
+
+        <div className="panel">
+          <div className="panel-head">Summary</div>
+          <div className="panel-body">
+            <table className="propgrid">
+              <tbody>
+                <tr><th>Files selected</th><td>{fmtCount(totals.includedCount)}</td></tr>
+                <tr><th>Total size</th><td>{fmtSize(totals.includedSize)}</td></tr>
+                <tr><th>Excluded</th><td className="dim">{fmtCount(totals.excludedCount)} files ({fmtSize(totals.excludedSize)})</td></tr>
+                <tr><th>Device</th><td className="mono">{discovery.device_serial}</td></tr>
+              </tbody>
+            </table>
           </div>
-          <label className="dim">Backup destination parent directory (default: your Desktop)</label>
-          <input type="text" placeholder="~/Desktop" value={destParent} onChange={(e) => setDestParent(e.target.value)} />
         </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Included categories</h3>
-          <table><thead><tr><th>Category</th><th className="right">Files</th><th className="right">Size</th></tr></thead>
-            <tbody>
-              {discovery.categories.map((cat) => {
-                const s = categoryStats(cat, states);
-                if (s.includedCount === 0) return null;
-                return <tr key={cat.id}><td>{cat.label}</td><td className="right">{s.includedCount}</td><td className="right">{fmtSize(s.includedSize)}</td></tr>;
-              })}
-            </tbody>
-          </table>
+
+        <div className="panel">
+          <div className="panel-head">Destination</div>
+          <div className="panel-body">
+            <div className="field">
+              <label htmlFor="dest">Backup destination parent directory</label>
+              <input
+                id="dest"
+                type="text"
+                placeholder="~/Desktop  (default)"
+                value={destParent}
+                onChange={(e) => setDestParent(e.target.value)}
+              />
+              <div className="hint">A timestamped subfolder is created inside this directory.</div>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Excluded categories / items</h3>
-          <table><thead><tr><th>Category</th><th className="right">Excluded files</th></tr></thead>
-            <tbody>
-              {discovery.categories.map((cat) => {
-                const s = categoryStats(cat, states);
-                const excluded = s.total - s.includedCount;
-                if (excluded === 0) return null;
-                return <tr key={cat.id}><td>{cat.label}</td><td className="right">{excluded}</td></tr>;
-              })}
-            </tbody>
-          </table>
+
+        <div className="panel">
+          <div className="panel-head">Included Categories</div>
+          <div className="panel-body flush scroll-y">
+            <table className="grid">
+              <thead><tr><th>Category</th><th className="right">Files</th><th className="right">Size</th></tr></thead>
+              <tbody>
+                {discovery.categories.map((cat) => {
+                  const s = categoryStats(cat, states);
+                  if (s.includedCount === 0) return null;
+                  return (
+                    <tr key={cat.id}>
+                      <td>{cat.label}</td>
+                      <td className="right">{fmtCount(s.includedCount)}</td>
+                      <td className="right">{fmtSize(s.includedSize)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <div className="panel">
+          <div className="panel-head">Excluded</div>
+          <div className="panel-body flush scroll-y">
+            <table className="grid">
+              <thead><tr><th>Category</th><th className="right">Excluded files</th></tr></thead>
+              <tbody>
+                {discovery.categories.map((cat) => {
+                  const s = categoryStats(cat, states);
+                  const excluded = s.total - s.includedCount;
+                  if (excluded === 0) return null;
+                  return (
+                    <tr key={cat.id}>
+                      <td>{cat.label}</td>
+                      <td className="right">{fmtCount(excluded)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {discovery.inaccessible.length > 0 && (
-          <div className="card">
-            <h3 style={{ marginTop: 0 }}>Inaccessible locations</h3>
-            {discovery.inaccessible.map((i) => <div key={i.path} className="dim">{i.path}: {i.reason}</div>)}
+          <div className="panel">
+            <div className="panel-head">Inaccessible Locations</div>
+            <div className="panel-body">
+              {discovery.inaccessible.map((i) => (
+                <div key={i.path} style={{ marginBottom: 6 }}>
+                  <div className="mono">{i.path}</div>
+                  <div className="dim">{i.reason}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => setStep("select")}>Back to selection</button>
+
+        <div className="wizard-footer">
+          <span className="dim">{fmtCount(totals.includedCount)} files, {fmtSize(totals.includedSize)}</span>
+          <span className="spacer" />
+          <button onClick={() => setStep("select")}>&lt; Back</button>
           <button className="primary" onClick={doStartBackup}>Start Backup</button>
         </div>
       </>
     );
   }
 
+  /* -------------------------------------------------------------- select */
+
   return (
     <>
-      <h2>Select files to back up</h2>
-      <p className="subtitle">Device {discovery.device_serial} — discovered {discovery.categories.reduce((n, c) => n + c.files.length, 0)} files.</p>
-
-      <div className="summary-bar">
-        <div className="stat"><strong>{totals.includedCount}</strong>selected</div>
-        <div className="stat"><strong>{fmtSize(totals.includedSize)}</strong>selected size</div>
-        <div className="stat"><strong>{totals.excludedCount}</strong>excluded</div>
-        <div className="stat"><strong>{fmtSize(totals.excludedSize)}</strong>excluded size</div>
+      <div className="page-head">
+        <h1>Select Files</h1>
+        <p className="page-sub">Step 1 of 2 — choose what to copy off the device.</p>
+        <span className="spacer" />
+        <span className="dim">
+          {discovery.categories.length} categories · {fmtCount(totalFiles)} files
+        </span>
       </div>
 
-      {discovery.categories.map((cat) => {
-        const s = categoryStats(cat, states);
-        const isExpanded = !!expanded[cat.id];
-        const filter = (filterText[cat.id] || "").toLowerCase();
-        const visibleFiles = isExpanded ? cat.files.filter((f) => f.filename.toLowerCase().includes(filter)) : [];
-        return (
-          <div className="card" key={cat.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <input
-                  type="checkbox"
-                  checked={s.includedCount === s.total && s.total > 0}
-                  ref={(el) => { if (el) el.indeterminate = s.includedCount > 0 && s.includedCount < s.total; }}
-                  onChange={(e) => setCategoryState(cat, e.target.checked ? "INCLUDE" : "EXCLUDE")}
-                />{" "}
-                <b>{cat.label}</b>{" "}
-                <span className="dim">({cat.report_group})</span>
-                {!cat.default_include && <span className="badge skipped" style={{ marginLeft: 8 }}>excluded by default</span>}
-              </div>
-              <div>
-                <span className="dim">{s.includedCount}/{s.total} files, {fmtSize(s.includedSize)}</span>{" "}
-                <button onClick={() => setExpanded((p) => ({ ...p, [cat.id]: !p[cat.id] }))}>
-                  {isExpanded ? "Collapse" : "Expand"}
-                </button>
-              </div>
-            </div>
-            {isExpanded && (
-              <>
-                <input
-                  type="text"
-                  placeholder="Filter by filename..."
-                  style={{ margin: "10px 0" }}
-                  value={filterText[cat.id] || ""}
-                  onChange={(e) => setFilterText((p) => ({ ...p, [cat.id]: e.target.value }))}
-                />
-                <table>
-                  <thead><tr><th></th><th>Filename</th><th className="right">Size</th><th>Flags</th></tr></thead>
-                  <tbody>
-                    {visibleFiles.slice(0, 500).map((f) => (
-                      <tr key={f.path}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={states[f.path] === "INCLUDE"}
-                            disabled={f.default_state === "INACCESSIBLE"}
-                            onChange={(e) => setFileState(f, e.target.checked ? "INCLUDE" : "EXCLUDE")}
-                          />
-                        </td>
-                        <td className="mono">{f.filename}</td>
-                        <td className="right">{fmtSize(f.size)}</td>
-                        <td>
-                          {f.is_trashed && <span className="badge skipped">trashed</span>}{" "}
-                          {f.crypt14_kind === "current" && <span className="badge protected">current DB</span>}{" "}
-                          {f.crypt14_kind === "historical" && <span className="badge eligible">historical DB</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {visibleFiles.length > 500 && <p className="dim">Showing first 500 of {visibleFiles.length} matching files.</p>}
-              </>
-            )}
-          </div>
-        );
-      })}
+      {error && <div className="notice error"><span><strong>Error.</strong> {error}</span></div>}
 
-      <button className="primary" onClick={doReview} disabled={totals.includedCount === 0}>
-        Review Backup ({totals.includedCount} files)
-      </button>
+      <div className="toolbar">
+        <span className="toolbar-label">Filter:</span>
+        <input
+          type="text"
+          placeholder="Filter by filename..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        <button onClick={() => setFilter("")} disabled={!filter}>Clear</button>
+        <span className="sep" />
+        <button onClick={() => setAll("INCLUDE")}>Select All</button>
+        <button onClick={() => setAll("EXCLUDE")}>Deselect All</button>
+        <span className="sep" />
+        <button onClick={expandAll} disabled={!!needle}>Expand All</button>
+        <button onClick={collapseAll} disabled={!!needle}>Collapse All</button>
+      </div>
+
+      <FileTree
+        roots={displayRoots}
+        states={states}
+        onSetFiles={setFilesState}
+        expanded={effectiveExpanded}
+        onToggleExpand={(key) => setExpanded((p) => ({ ...p, [key]: !p[key] }))}
+        fmtSize={fmtSize}
+        emptyLabel={needle ? `No files match "${filter}".` : "No files discovered."}
+      />
+
+      <div className="statstrip" style={{ borderTop: "none", borderRadius: "0 0 2px 2px" }}>
+        <div className="stat"><strong>{fmtCount(totals.includedCount)}</strong>selected</div>
+        <div className="stat"><strong>{fmtSize(totals.includedSize)}</strong>to copy</div>
+        <div className="stat"><strong>{fmtCount(totals.excludedCount)}</strong>excluded</div>
+        {discovery.inaccessible.length > 0 && (
+          <div className="stat dim">{discovery.inaccessible.length} inaccessible location(s)</div>
+        )}
+      </div>
+
+      <div className="wizard-footer">
+        <span className="dim">Select files, then continue.</span>
+        <span className="spacer" />
+        <button
+          className="primary"
+          onClick={doReview}
+          disabled={totals.includedCount === 0}
+        >
+          Next &gt;
+        </button>
+      </div>
     </>
   );
 }
