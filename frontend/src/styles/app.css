@@ -1,170 +1,693 @@
+/* ==========================================================================
+   DESIGN SYSTEM — classic desktop utility / installer
+   Small, flat token set. Everything else in this file composes from it.
+   ========================================================================== */
 :root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --panel-2: #1e222b;
-  --border: #2a2f3a;
-  --text: #e6e8ec;
-  --text-dim: #9aa1ac;
-  --accent: #4f8cff;
-  --green: #3ecf6a;
-  --amber: #e6b800;
-  --red: #ff5c5c;
-  --mono: ui-monospace, Menlo, Consolas, monospace;
+  /* Surfaces */
+  --bg: #f0f0f0;           /* application background */
+  --panel: #ffffff;        /* panel / list / input background */
+  --panel-2: #f6f6f7;      /* toolbar, table header, section header */
+  --panel-3: #eaeaec;      /* pressed / inset */
+
+  /* Lines */
+  --border: #b4b8bd;       /* control + panel borders */
+  --border-soft: #dfe1e3;  /* hairline separators */
+  --tree-line: #b8bcc2;    /* tree connector lines */
+
+  /* Text */
+  --text: #1a1a1a;
+  --text-dim: #5f6368;
+  --text-disabled: #9aa0a6;
+
+  /* Interaction (classic Explorer selection colors) */
+  --accent: #0067c0;
+  --hover-bg: #e5f3ff;
+  --selected-bg: #cce8ff;
+  --selected-border: #99d1ff;
+  --focus: #0067c0;
+
+  /* Status */
+  --green: #107c41;
+  --amber: #8a6d00;
+  --red: #b42318;
+
+  /* Metrics */
+  --row-h: 22px;           /* tree row height (fixed: virtualizer depends on it) */
+  --control-h: 24px;
+  --indent: 16px;          /* tree indent per depth level */
+  --radius: 2px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+
+  --fs-sm: 11px;
+  --fs: 12px;
+  --fs-md: 13px;
+
+  --mono: ui-monospace, Consolas, "Courier New", monospace;
 }
 
 * { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: var(--fs);
+  line-height: 1.45;
 }
 
-.layout {
+/* ==========================================================================
+   APPLICATION CHROME — titlebar / nav pane / content / status bar
+   ========================================================================== */
+.app-shell {
+  height: 100%;
   display: flex;
-  min-height: 100vh;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.sidebar {
-  width: 220px;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-  padding: 20px 0;
-  flex-shrink: 0;
-}
-
-.sidebar h1 {
-  font-size: 15px;
-  padding: 0 20px 16px;
-  margin: 0;
-  color: var(--text);
+.titlebar {
+  flex: 0 0 auto;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  background: var(--panel-2);
   border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
+  font-size: var(--fs);
+  font-weight: 600;
+}
+.titlebar-icon { flex: 0 0 auto; }
+.titlebar-sep { flex: 1; }
+.titlebar-meta { font-weight: 400; color: var(--text-dim); font-size: var(--fs-sm); }
+
+.app-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
 }
 
-.sidebar nav a {
-  display: block;
-  padding: 10px 20px;
+.navpane {
+  flex: 0 0 168px;
+  background: var(--panel-2);
+  border-right: 1px solid var(--border);
+  padding: var(--sp-1) 0;
+  overflow-y: auto;
+}
+.navpane-group {
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.navpane a {
+  display: block;
+  padding: 3px var(--sp-3);
+  color: var(--text);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--fs);
+  border-left: 3px solid transparent;
+}
+.navpane a:hover { background: var(--hover-bg); }
+.navpane a.active {
+  background: var(--selected-bg);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.navpane a:focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+/* Only the tree grows; fixed-height chrome keeps its intrinsic size. */
+.content > .page-head,
+.content > .toolbar,
+.content > .statstrip,
+.content > .notice,
+.content > .panel,
+.content > .placeholder,
+.content > .wizard-footer { flex: 0 0 auto; }
+
+/* Bottom application status bar */
+.statusbar {
+  flex: 0 0 auto;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.statusbar-cell {
+  padding: 0 var(--sp-3);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-right: 1px solid var(--border-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusbar-cell.grow { flex: 1; border-right: none; }
+.statusbar-cell.right { border-right: none; border-left: 1px solid var(--border-soft); }
+.status-led {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-disabled); flex: 0 0 auto;
+}
+.status-led.on { background: var(--green); }
+.status-led.off { background: var(--red); }
+
+/* ==========================================================================
+   PAGE HEADER — compact strip, not a hero
+   ========================================================================== */
+.page-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.page-head h1 { font-size: var(--fs-md); font-weight: 600; margin: 0; }
+.page-head .page-sub { font-size: var(--fs); color: var(--text-dim); margin: 0; }
+.page-head .spacer { flex: 1; }
+
+/* ==========================================================================
+   PANEL — bordered box with optional section header
+   ========================================================================== */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: var(--sp-3);
+}
+.panel-head {
+  padding: 4px var(--sp-3);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.panel-head .spacer { flex: 1; }
+.panel-body { padding: var(--sp-3); }
+.panel-body.flush { padding: 0; }
+.panel.plain { border: none; background: none; margin-bottom: var(--sp-3); }
+
+/* ==========================================================================
+   TOOLBAR — traditional button strip
+   ========================================================================== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  flex-wrap: wrap;
+}
+.toolbar .sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-soft);
+  margin: 2px var(--sp-1);
+}
+.toolbar .spacer { flex: 1; }
+.toolbar-label { font-size: var(--fs); color: var(--text-dim); }
+.toolbar input[type="text"] { width: 200px; }
+/* A panel that sits directly under a toolbar joins with it */
+.toolbar + .panel, .toolbar + .tree-viewport {
+  border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: 0;
 }
 
-.sidebar nav a:hover { background: var(--panel-2); color: var(--text); }
-.sidebar nav a.active { color: var(--accent); background: var(--panel-2); border-right: 2px solid var(--accent); }
+/* ==========================================================================
+   CONTROLS
+   ========================================================================== */
+button {
+  font: inherit;
+  font-size: var(--fs);
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--accent); }
+button:active:not(:disabled) { background: var(--panel-3); }
+button:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
+button:disabled { color: var(--text-disabled); background: var(--panel-2); cursor: default; }
 
-.main {
-  flex: 1;
-  padding: 32px 40px;
-  max-width: 1100px;
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: #0058a6; border-color: #0058a6; }
+button.primary:disabled { background: var(--panel-2); border-color: var(--border); color: var(--text-disabled); font-weight: 400; }
+
+button.danger { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+button.danger:hover:not(:disabled) { background: #99201a; border-color: #99201a; }
+button.danger:disabled { background: var(--panel-2); border-color: var(--border); color: var(--text-disabled); font-weight: 400; }
+
+button.link {
+  background: none; border: none; height: auto; padding: 0;
+  color: var(--accent); text-decoration: underline; font-size: var(--fs);
 }
 
-h2 { font-size: 20px; margin-bottom: 4px; }
-.subtitle { color: var(--text-dim); margin-bottom: 24px; font-size: 14px; }
+input[type="text"], input[type="number"], select, textarea {
+  font: inherit;
+  font-size: var(--fs);
+  height: var(--control-h);
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  width: 100%;
+}
+textarea { height: auto; padding: 4px 6px; }
+input[type="text"]:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+input[type="text"]:disabled { background: var(--panel-3); color: var(--text-disabled); }
+
+input[type="checkbox"] {
+  width: 13px; height: 13px; margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+input[type="checkbox"]:disabled { cursor: default; }
+
+/* Field rows: label above control, compact */
+.field { margin-bottom: var(--sp-3); }
+.field:last-child { margin-bottom: 0; }
+.field > label { display: block; margin-bottom: 2px; color: var(--text-dim); font-size: var(--fs); }
+.field .hint { margin-top: 2px; color: var(--text-dim); font-size: var(--fs-sm); }
+.check-row { display: flex; align-items: flex-start; gap: 6px; margin-bottom: var(--sp-2); }
+.check-row label { cursor: pointer; }
+
+/* Property grid — classic two-column key/value list */
+.propgrid { width: 100%; border-collapse: collapse; font-size: var(--fs); }
+.propgrid th, .propgrid td {
+  text-align: left;
+  padding: 3px var(--sp-2);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+.propgrid th {
+  width: 190px;
+  font-weight: 400;
+  color: var(--text-dim);
+  background: none;
+  text-transform: none;
+  font-size: var(--fs);
+  border-right: 1px solid var(--border-soft);
+}
+.propgrid tr:last-child th, .propgrid tr:last-child td { border-bottom: none; }
+.propgrid tr:hover td, .propgrid tr:hover th { background: transparent; }
+
+/* Wizard footer — right-aligned action row, like a setup dialog */
+.wizard-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+.wizard-footer .spacer { flex: 1; }
+
+/* ==========================================================================
+   TABLES / LISTS
+   ========================================================================== */
+table.grid { width: 100%; border-collapse: collapse; font-size: var(--fs); }
+table.grid th, table.grid td {
+  text-align: left;
+  padding: 3px var(--sp-2);
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+table.grid th {
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  position: sticky;
+  top: 0;
+}
+table.grid td.wrap { white-space: normal; }
+table.grid tbody tr:hover td { background: var(--hover-bg); }
+table.grid .right { text-align: right; }
+
+.scroll-y { max-height: 340px; overflow-y: auto; }
+
+.mono { font-family: var(--mono); font-size: var(--fs); }
+.dim { color: var(--text-dim); }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+
+/* ==========================================================================
+   BADGES — small flat status tags
+   ========================================================================== */
+.badge {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 15px;
+  vertical-align: middle;
+}
+.badge.connected, .badge.verified { background: #e6f4ea; color: var(--green); border-color: #b7dfc4; }
+.badge.disconnected, .badge.failed { background: #fce8e6; color: var(--red); border-color: #f3bcb6; }
+.badge.protected { background: #fef7e0; color: var(--amber); border-color: #e8d18a; }
+.badge.eligible { background: #e8f0fe; color: var(--accent); border-color: #b8d4f5; }
+.badge.skipped { background: #eceded; color: var(--text-dim); border-color: #d7d9da; }
+
+/* ==========================================================================
+   STAT STRIP — inline Explorer-style summary segments
+   ========================================================================== */
+.statstrip {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs);
+}
+.statstrip .stat {
+  padding: 3px var(--sp-3);
+  border-right: 1px solid var(--border-soft);
+}
+.statstrip .stat:last-child { border-right: none; }
+.statstrip .stat strong { font-weight: 700; margin-right: 4px; }
+/* joins to a toolbar directly above it */
+.toolbar + .statstrip { border-top: none; border-radius: 0; margin-bottom: 0; }
+
+/* ==========================================================================
+   NOTICES — thin left-accent bars
+   ========================================================================== */
+.notice {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  font-size: var(--fs);
+  background: var(--panel);
+}
+.notice.info { border-left-color: var(--accent); background: #f2f7fd; }
+.notice.warn { border-left-color: #c99a00; background: #fffaeb; border-color: #e8d18a; color: #6b5300; }
+.notice.error { border-left-color: var(--red); background: #fdf3f2; border-color: #f3bcb6; color: #8c2018; }
+.notice strong { font-weight: 600; }
+
+/* Empty / loading states — quiet, centered, utilitarian */
+.placeholder {
+  padding: var(--sp-4);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: var(--fs);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.placeholder.inline { border: none; background: none; padding: var(--sp-3); text-align: left; }
+
+/* ==========================================================================
+   PROGRESS — chunky, square, bordered
+   ========================================================================== */
+.progress {
+  height: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.progress-fill { height: 100%; background: var(--accent); transition: width 0.15s linear; }
+
+pre.report {
+  margin: 0;
+  padding: var(--sp-2);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: var(--fs);
+  max-height: 380px;
+  overflow: auto;
+  white-space: pre;
+}
+
+/* ==========================================================================
+   FILE TREE — first-class installer-style tree control
+   Rows are a fixed height (--row-h); the virtualizer depends on that.
+   ========================================================================== */
+.tree-viewport {
+  /* Grows to fill the remaining content height so the list shows as many
+     rows as the window allows; scrolls internally past that. */
+  flex: 1 1 auto;
+  min-height: 200px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  position: relative;
+}
+.tree-viewport:focus-visible { border-color: var(--accent); }
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  height: var(--row-h);
+  padding-right: var(--sp-2);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+.tree-row:hover { background: var(--hover-bg); }
+.tree-row.selected { background: var(--selected-bg); }
+.tree-viewport:focus-within .tree-row.selected { box-shadow: inset 0 0 0 1px var(--selected-border); }
+.tree-row.disabled { color: var(--text-disabled); }
+
+/* Indent guides: one per ancestor depth, drawing the vertical connector */
+.tree-guide {
+  width: var(--indent);
+  height: 100%;
+  flex: 0 0 auto;
+  position: relative;
+}
+.tree-guide.line::before {
+  content: "";
+  position: absolute;
+  left: 7px; top: 0; bottom: 0;
+  border-left: 1px dotted var(--tree-line);
+}
+/* The elbow at the row's own depth: vertical stub + horizontal tick */
+.tree-elbow {
+  width: var(--indent);
+  height: 100%;
+  flex: 0 0 auto;
+  position: relative;
+}
+.tree-elbow::before {
+  content: "";
+  position: absolute;
+  left: 7px; top: 0;
+  height: calc(var(--row-h) / 2);
+  border-left: 1px dotted var(--tree-line);
+}
+.tree-elbow.continues::before { height: 100%; }
+.tree-elbow::after {
+  content: "";
+  position: absolute;
+  left: 7px; top: calc(var(--row-h) / 2);
+  width: 8px;
+  border-top: 1px dotted var(--tree-line);
+}
+
+.tree-toggle {
+  width: 16px; height: 100%;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.tree-toggle span { display: block; transition: transform 0.1s; }
+.tree-toggle.open span { transform: rotate(90deg); }
+.tree-toggle:hover { color: var(--accent); }
+.tree-spacer { width: 16px; flex: 0 0 auto; }
+
+.tree-check { margin: 0 4px 0 2px; }
+.tree-icon { flex: 0 0 auto; margin-right: 5px; }
+
+.tree-label {
+  font-size: var(--fs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.tree-root-label { font-weight: 600; }
+.tree-path { margin-left: 6px; color: var(--text-dim); font-size: var(--fs-sm); }
+.tree-meta {
+  margin-left: auto;
+  padding-left: var(--sp-3);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  flex: 0 0 auto;
+}
+.tree-row .badge { margin-left: 6px; }
+
+/* ==========================================================================
+   RESPONSIVE — stays a tool; nav becomes a tab strip, meta columns drop
+   ========================================================================== */
+@media (max-width: 860px) {
+  .app-body { flex-direction: column; }
+  .navpane {
+    flex: 0 0 auto;
+    display: flex;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+  }
+  .navpane-group { display: none; }
+  .navpane a {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 5px var(--sp-3);
+  }
+  .navpane a.active { border-left: none; border-bottom-color: var(--accent); }
+  .content { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+  .propgrid th { width: 130px; }
+}
+
+@media (max-width: 620px) {
+  .tree-path, .tree-meta { display: none; }
+  .toolbar input[type="text"] { width: 100%; }
+  .statusbar-cell.optional { display: none; }
+}
+
+/* ==========================================================================
+   TEMPORARY COMPATIBILITY LAYER
+   Styles for pages that have not been migrated to the classes above yet.
+   Mapped onto the new tokens so those pages stay coherent in the meantime.
+   Delete each rule as its last caller is migrated.
+   ========================================================================== */
+h2 { font-size: var(--fs-md); font-weight: 600; margin: 0 0 4px; }
+
+.subtitle {
+  color: var(--text-dim);
+  font-size: var(--fs);
+  margin: 0 0 var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
 
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
 }
-
-.badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.badge.connected { background: rgba(62,207,106,0.15); color: var(--green); }
-.badge.disconnected { background: rgba(255,92,92,0.15); color: var(--red); }
-.badge.verified { background: rgba(62,207,106,0.15); color: var(--green); }
-.badge.protected { background: rgba(230,184,0,0.15); color: var(--amber); }
-.badge.eligible { background: rgba(79,140,255,0.15); color: var(--accent); }
-.badge.skipped { background: rgba(154,161,172,0.2); color: var(--text-dim); }
-.badge.failed { background: rgba(255,92,92,0.15); color: var(--red); }
-
-button {
-  font: inherit;
-  padding: 9px 16px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
+.card h3 {
+  margin: calc(var(--sp-3) * -1) calc(var(--sp-3) * -1) var(--sp-2);
+  padding: 4px var(--sp-3);
+  font-size: var(--fs);
   background: var(--panel-2);
-  color: var(--text);
-  cursor: pointer;
+  border-bottom: 1px solid var(--border-soft);
 }
-button:hover:not(:disabled) { border-color: var(--accent); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-button.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
-button.danger { background: var(--red); border-color: var(--red); color: white; font-weight: 600; }
-button.danger:hover:not(:disabled) { filter: brightness(1.1); }
-
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; }
-tr:hover td { background: var(--panel-2); }
-
-.mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
-.dim { color: var(--text-dim); }
-.right { text-align: right; }
 
 .summary-bar {
   display: flex;
-  gap: 24px;
-  padding: 14px 20px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--panel-2);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs);
 }
-.summary-bar .stat strong { display: block; font-size: 18px; }
+.summary-bar .stat { padding: 3px var(--sp-3); border-right: 1px solid var(--border-soft); }
+.summary-bar .stat:last-child { border-right: none; }
+.summary-bar .stat strong { font-weight: 700; margin-right: 4px; }
 
-.warning-banner {
-  background: rgba(255,92,92,0.1);
-  border: 1px solid var(--red);
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  color: #ffb3b3;
+table:not(.grid):not(.propgrid) { width: 100%; border-collapse: collapse; font-size: var(--fs); }
+table:not(.grid):not(.propgrid) th,
+table:not(.grid):not(.propgrid) td {
+  text-align: left;
+  padding: 3px var(--sp-2);
+  border-bottom: 1px solid var(--border-soft);
 }
-.warning-banner strong { color: var(--red); }
+table:not(.grid):not(.propgrid) th {
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
 
 .progress-bar {
-  height: 8px;
-  background: var(--panel-2);
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 8px 0;
-}
-.progress-bar-fill { height: 100%; background: var(--accent); transition: width 0.2s; }
-
-input[type="text"], textarea, select {
-  font: inherit;
-  padding: 8px 10px;
-  border-radius: 6px;
+  height: 16px;
+  background: var(--panel);
   border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--text);
-  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: var(--sp-2) 0;
 }
+.progress-bar-fill { height: 100%; background: var(--accent); transition: width 0.15s linear; }
 
-pre.report {
-  background: var(--panel-2);
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-size: 12.5px;
-  max-height: 500px;
-  overflow-y: auto;
+.warning-banner {
+  background: #fffaeb;
+  border: 1px solid #e8d18a;
+  border-left: 3px solid #c99a00;
+  border-radius: var(--radius);
+  padding: 6px var(--sp-3);
+  margin-bottom: var(--sp-3);
+  color: #6b5300;
+  font-size: var(--fs);
 }
 
 .error-box {
-  background: rgba(255,92,92,0.1);
-  border: 1px solid var(--red);
-  color: #ffb3b3;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  background: #fdf3f2;
+  border: 1px solid #f3bcb6;
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius);
+  color: #8c2018;
+  padding: 6px var(--sp-3);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs);
 }
