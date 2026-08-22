@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from "react-router-dom";
+import UpdateBanner from "./components/UpdateBanner";
 import Backup from "./pages/Backup";
 import Cleanup from "./pages/Cleanup";
 import Dashboard from "./pages/Dashboard";
@@ -6,6 +7,7 @@ import Discover from "./pages/Discover";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 import { DeviceProvider, useDevice } from "./state/device";
+import { UpdateProvider } from "./state/update";
 
 const NAV = [
   { to: "/", label: "Device", end: true },
@@ -76,6 +78,8 @@ function Shell() {
         <span className="titlebar-meta">Local tool — 127.0.0.1</span>
       </header>
 
+      <UpdateBanner />
+
       <div className="app-body">
         <nav className="navpane" aria-label="Sections">
           <div className="navpane-group">Tasks</div>
@@ -106,7 +110,9 @@ function Shell() {
 export default function App() {
   return (
     <DeviceProvider>
-      <Shell />
+      <UpdateProvider>
+        <Shell />
+      </UpdateProvider>
     </DeviceProvider>
   );
 }

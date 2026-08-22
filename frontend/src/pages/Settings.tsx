@@ -1,5 +1,87 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useUpdate } from "../state/update";
+
+function UpdatesPanel() {
+  const { state, busy, refresh, setEnabled } = useUpdate();
+  if (!state) return null;
+
+  const lastChecked =
+    state.checked_at != null ? new Date(state.checked_at * 1000).toLocaleString() : "never";
+
+  return (
+    <div className="panel">
+      <div className="panel-head">Updates</div>
+      <div className="panel-body">
+        <table className="propgrid">
+          <tbody>
+            <tr>
+              <th>Installed version</th>
+              <td className="mono">
+                {state.current_version}
+                {!state.is_release_build && (
+                  <span className="dim"> — source checkout, not updatable</span>
+                )}
+              </td>
+            </tr>
+            <tr>
+              <th>Last checked</th>
+              <td>
+                {state.enabled ? lastChecked : <span className="dim">checking is off</span>}
+              </td>
+            </tr>
+            {state.enabled && state.latest && (
+              <tr>
+                <th>Latest release</th>
+                <td className="mono">{state.latest.version}</td>
+              </tr>
+            )}
+            {state.enabled && state.error && (
+              <tr>
+                <th>Result</th>
+                <td className="dim">could not reach GitHub — {state.error}</td>
+              </tr>
+            )}
+            {!state.supported && (
+              <tr>
+                <th>Availability</th>
+                <td className="dim">no installer is published for this platform</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        <div className="check-row" style={{ marginTop: "var(--sp-3)" }}>
+          <input
+            id="updatecheck"
+            type="checkbox"
+            checked={state.enabled}
+            disabled={busy}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          <label htmlFor="updatecheck">
+            Check GitHub for a new version once a day
+            <div className="hint">
+              The only network request this app makes. It asks GitHub what the latest
+              release is and sends nothing about you, your device or your files. Turn
+              this off and the app never contacts anything.
+            </div>
+          </label>
+        </div>
+
+        <div className="toolbar">
+          <button onClick={() => refresh(true)} disabled={busy || !state.enabled}>
+            {busy ? "Checking..." : "Check now"}
+          </button>
+          <span className="spacer" />
+          <a className="button-link" href={state.releases_url} target="_blank" rel="noreferrer">
+            All releases
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Settings() {
   const [config, setConfig] = useState<any>(null);
@@ -102,6 +184,8 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      <UpdatesPanel />
 
       <div className="wizard-footer">
         {saved && <span className="badge verified">Saved</span>}

@@ -17,6 +17,7 @@ from app.api.routes_deletion import router as deletion_router
 from app.api.routes_device import router as device_router
 from app.api.routes_discovery import router as discovery_router
 from app.api.routes_meta import router as meta_router
+from app.api.routes_update import router as update_router
 from app.paths import frontend_dir
 from app.version import VERSION
 
@@ -58,6 +59,7 @@ app.include_router(discovery_router)
 app.include_router(backup_router)
 app.include_router(deletion_router)
 app.include_router(meta_router)
+app.include_router(update_router)
 
 
 @app.get("/api/health")

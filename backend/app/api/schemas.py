@@ -27,3 +27,13 @@ class ConfigUpdateRequest(BaseModel):
     default_backup_parent: str | None = None
     default_excluded_report_groups: list[str] | None = None
     protected_filename_patterns: list[str] | None = None
+    update_check_enabled: bool | None = None
+    update_dismissed_version: str | None = None
+
+
+class UpdatePreferenceRequest(BaseModel):
+    enabled: bool
+
+
+class UpdateDismissRequest(BaseModel):
+    version: str
