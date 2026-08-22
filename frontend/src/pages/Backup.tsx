@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, Category, DiscoveredFile, DiscoveryResult, watchJob } from "../api/client";
+import { getLastDiscoveryId, setLastDiscoveryId } from "../state/discovery";
 
 type FileStateMap = Record<string, string>;
 
@@ -20,8 +21,10 @@ function categoryStats(cat: Category, states: FileStateMap) {
 }
 
 export default function Backup() {
-  const [params] = useSearchParams();
-  const discoveryId = params.get("discovery");
+  const [params, setParams] = useSearchParams();
+  // The sidebar links to a bare /backup with no query param, so fall back to
+  // the last discovery this client saw rather than forcing a fresh scan.
+  const discoveryId = params.get("discovery") || getLastDiscoveryId();
 
   const [discovery, setDiscovery] = useState<DiscoveryResult | null>(null);
   const [states, setStates] = useState<FileStateMap>({});
@@ -38,12 +41,17 @@ export default function Backup() {
 
   useEffect(() => {
     if (!discoveryId) return;
+    setLastDiscoveryId(discoveryId);
+    // Put the id back in the URL so the page stays bookmarkable/shareable
+    // even when it was restored from storage.
+    if (!params.get("discovery")) setParams({ discovery: discoveryId }, { replace: true });
     api.getDiscovery(discoveryId).then((d) => {
       setDiscovery(d);
       const initial: FileStateMap = {};
       for (const cat of d.categories) for (const f of cat.files) initial[f.path] = f.default_state;
       setStates(initial);
     }).catch((e) => setError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discoveryId]);
 
   const totals = useMemo(() => {
