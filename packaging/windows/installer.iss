@@ -63,7 +63,11 @@ Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
+; No skipifsilent: an in-app update runs this installer with /SILENT and
+; relies on this entry to bring the app back up on the new version. With
+; the flag set, a silent update would leave the user staring at nothing
+; after their app closed itself.
+Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall
 
 [UninstallDelete]
 ; PyInstaller unpacks to a temp dir at runtime; nothing else to clean.

@@ -154,11 +154,27 @@ jobs:
         with:
           path: artifacts
 
+      # The in-app updater refuses to run an installer it cannot verify,
+      # and the GitHub release API reports an asset's size but no digest.
+      # So the digests are published as an asset of their own.
+      #
+      # This catches a truncated or corrupted download, not a compromised
+      # release -- the sums travel with the binary. Only code signing
+      # fixes that, and nothing here is signed yet.
+      - name: Publish SHA256SUMS
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.deb' -o -name '*.exe' \) -exec cp {} release/ \;
+          cd release
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/linux-deb/*.deb
-            artifacts/windows-installer/*.exe
+            release/*.deb
+            release/*.exe
+            release/SHA256SUMS
           generate_release_notes: true
           body: |
             ## Install

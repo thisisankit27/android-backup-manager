@@ -136,6 +136,31 @@ body {
 
 .infobar button, .infobar .button-link { flex: 0 0 auto; }
 
+/* Download progress: a thin rule across the width of the bar, matching
+   the chunky bordered .progress used on the backup and cleanup pages. */
+.infobar-progress {
+  flex: 1 1 100%;
+  height: 6px;
+  margin-top: var(--sp-1);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.infobar-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s linear;
+}
+
+.infobar-error {
+  flex: 1 1 100%;
+  margin-top: var(--sp-1);
+  color: #8c2018;
+}
+.infobar-error a { color: inherit; }
+
 /* Release notes expand onto their own line rather than squeezing the row. */
 .infobar-notes {
   flex: 1 1 100%;

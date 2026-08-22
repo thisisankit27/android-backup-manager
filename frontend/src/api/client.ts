@@ -97,6 +97,17 @@ export interface LatestRelease {
   assets: ReleaseAsset[];
 }
 
+export interface UpdateOutcome {
+  /** closing = the installer is running and we are exiting (Windows).
+   *  restart_required = installed in place, needs a relaunch (Linux).
+   *  manual = verified and downloaded, but we cannot apply it here. */
+  action: "closing" | "restart_required" | "manual";
+  version: string;
+  message: string;
+  path?: string;
+  command?: string;
+}
+
 export interface UpdateState {
   current_version: string;
   is_release_build: boolean;
@@ -155,6 +166,8 @@ export const api = {
     req<UpdateState>("/update/preference", { method: "POST", body: JSON.stringify({ enabled }) }),
   dismissUpdate: (version: string) =>
     req<UpdateState>("/update/dismiss", { method: "POST", body: JSON.stringify({ version }) }),
+  installUpdate: () => req<{ job_id: string }>("/update/install", { method: "POST" }),
+  restartApp: () => req<{ status: string }>("/update/restart", { method: "POST" }),
 };
 
 export function watchJob(

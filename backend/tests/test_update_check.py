@@ -112,7 +112,7 @@ def test_platforms_with_no_build_are_reported_rather_than_mismatched(monkeypatch
 
 
 @pytest.fixture
-def sandbox(tmp_path, monkeypatch):
+def update_sandbox(tmp_path, monkeypatch):
     """Point the settings file and the check cache at a temp directory."""
     from app import config
 
@@ -150,13 +150,13 @@ def _release_payload(version="0.2.0"):
     ).encode()
 
 
-def _set_enabled(sandbox, value):
+def _set_enabled(value):
     from app.config import Settings, save_settings
 
     save_settings(Settings(update_check_enabled=value))
 
 
-def test_nothing_is_fetched_before_the_user_has_been_asked(sandbox, monkeypatch):
+def test_nothing_is_fetched_before_the_user_has_been_asked(update_sandbox, monkeypatch):
     """The whole point of the tri-state. Until the answer is yes, the
     network is not touched at all."""
     def explode(*a, **k):
@@ -171,8 +171,8 @@ def test_nothing_is_fetched_before_the_user_has_been_asked(sandbox, monkeypatch)
     assert result["latest"] is None
 
 
-def test_nothing_is_fetched_after_the_user_declines(sandbox, monkeypatch):
-    _set_enabled(sandbox, False)
+def test_nothing_is_fetched_after_the_user_declines(update_sandbox, monkeypatch):
+    _set_enabled(False)
     monkeypatch.setattr(
         check_mod, "fetch", lambda *a, **k: (_ for _ in ()).throw(AssertionError("fetched"))
     )
@@ -182,8 +182,8 @@ def test_nothing_is_fetched_after_the_user_declines(sandbox, monkeypatch):
     assert result["enabled"] is False
 
 
-def test_a_newer_release_is_offered_once_enabled(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
+def test_a_newer_release_is_offered_once_enabled(update_sandbox, monkeypatch):
+    _set_enabled(True)
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: _release_payload("0.2.0"))
 
     result = check_mod.check()
@@ -193,14 +193,14 @@ def test_a_newer_release_is_offered_once_enabled(sandbox, monkeypatch):
     assert result["error"] is None
 
 
-def test_the_same_version_is_not_offered_to_itself(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
+def test_the_same_version_is_not_offered_to_itself(update_sandbox, monkeypatch):
+    _set_enabled(True)
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: _release_payload("0.1.2"))
     assert check_mod.check()["available"] is False
 
 
-def test_being_offline_is_not_an_error_the_user_sees(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
+def test_being_offline_is_not_an_error_the_user_sees(update_sandbox, monkeypatch):
+    _set_enabled(True)
 
     def offline(*a, **k):
         raise OSError("Network is unreachable")
@@ -213,8 +213,8 @@ def test_being_offline_is_not_an_error_the_user_sees(sandbox, monkeypatch):
     assert "unreachable" in result["error"]
 
 
-def test_the_check_runs_at_most_once_a_day(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
+def test_the_check_runs_at_most_once_a_day(update_sandbox, monkeypatch):
+    _set_enabled(True)
     calls = []
 
     def counted(*a, **k):
@@ -234,9 +234,9 @@ def test_the_check_runs_at_most_once_a_day(sandbox, monkeypatch):
     assert len(calls) == 2
 
 
-def test_a_stale_cache_is_refetched(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
-    (sandbox / "update-check.json").write_text(
+def test_a_stale_cache_is_refetched(update_sandbox, monkeypatch):
+    _set_enabled(True)
+    (update_sandbox / "update-check.json").write_text(
         json.dumps(
             {
                 "checked_at": time.time() - check_mod.CHECK_INTERVAL - 1,
@@ -249,9 +249,9 @@ def test_a_stale_cache_is_refetched(sandbox, monkeypatch):
     assert check_mod.check()["latest"]["version"] == "0.2.0"
 
 
-def test_a_failed_check_retries_sooner_than_a_successful_one(sandbox, monkeypatch):
-    _set_enabled(sandbox, True)
-    (sandbox / "update-check.json").write_text(
+def test_a_failed_check_retries_sooner_than_a_successful_one(update_sandbox, monkeypatch):
+    _set_enabled(True)
+    (update_sandbox / "update-check.json").write_text(
         json.dumps({"checked_at": time.time() - 2 * 60 * 60, "release": None, "error": "offline"})
     )
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: _release_payload("0.2.0"))
@@ -260,9 +260,9 @@ def test_a_failed_check_retries_sooner_than_a_successful_one(sandbox, monkeypatc
     assert check_mod.check()["latest"]["version"] == "0.2.0"
 
 
-def test_a_source_checkout_is_never_offered_an_update(sandbox, monkeypatch):
+def test_a_source_checkout_is_never_offered_an_update(update_sandbox, monkeypatch):
     """0.0.0-dev has no installed copy for an installer to replace."""
-    _set_enabled(sandbox, True)
+    _set_enabled(True)
     monkeypatch.setattr(check_mod, "VERSION", "0.0.0-dev")
     monkeypatch.setattr(check_mod, "is_release_build", lambda: False)
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: _release_payload("9.9.9"))
@@ -272,7 +272,7 @@ def test_a_source_checkout_is_never_offered_an_update(sandbox, monkeypatch):
     assert result["latest"]["version"] == "9.9.9"  # still reported, just not offered
 
 
-def test_a_dismissed_version_is_marked_as_such(sandbox, monkeypatch):
+def test_a_dismissed_version_is_marked_as_such(update_sandbox, monkeypatch):
     from app.config import Settings, save_settings
 
     save_settings(Settings(update_check_enabled=True, update_dismissed_version="0.2.0"))
@@ -283,18 +283,18 @@ def test_a_dismissed_version_is_marked_as_such(sandbox, monkeypatch):
     assert result["dismissed"] is True
 
     # A newer release than the dismissed one is announced again.
-    (sandbox / "update-check.json").unlink()
+    (update_sandbox / "update-check.json").unlink()
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: _release_payload("0.3.0"))
     assert check_mod.check()["dismissed"] is False
 
 
 def test_a_release_with_no_asset_for_this_platform_is_not_offered_a_download(
-    sandbox, monkeypatch
+    update_sandbox, monkeypatch
 ):
     payload = json.loads(_release_payload("0.2.0"))
     payload["assets"] = [{"name": "AndroidBackupManager-0.2.0-Setup.exe"}]
     monkeypatch.setattr(check_mod, "fetch", lambda *a, **k: json.dumps(payload).encode())
-    _set_enabled(sandbox, True)
+    _set_enabled(True)
 
     result = check_mod.check()
     assert result["available"] is True
