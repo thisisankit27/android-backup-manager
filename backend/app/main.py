@@ -5,9 +5,10 @@ device backups and must never be reachable from the network. The browser
 never talks to adb directly; every device/filesystem operation goes through
 this backend, which owns all the safety checks.
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.adb.errors import AdbError, AmbiguousDeviceError, ConnectionLostError, NoDeviceError
 from app.api.routes_backup import router as backup_router
@@ -15,6 +16,7 @@ from app.api.routes_deletion import router as deletion_router
 from app.api.routes_device import router as device_router
 from app.api.routes_discovery import router as discovery_router
 from app.api.routes_meta import router as meta_router
+from app.paths import frontend_dir
 
 app = FastAPI(title="Android Backup Manager", version="0.1.0")
 
@@ -58,3 +60,38 @@ app.include_router(meta_router)
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# --------------------------------------------------------------------------
+# Frontend
+#
+# In the packaged desktop app the backend also serves the built UI, so there
+# is one process and one origin. From a source checkout `frontend/dist` may
+# not exist (the Vite dev server is serving the UI instead), in which case
+# these routes are simply not registered.
+#
+# Registered last, on purpose: the SPA catch-all must not shadow the /api
+# routers above.
+# --------------------------------------------------------------------------
+_FRONTEND = frontend_dir()
+
+if _FRONTEND is not None:
+    app.mount("/assets", StaticFiles(directory=_FRONTEND / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        """Serve the SPA shell for any non-API path.
+
+        An unmatched /api/* path must still 404 as JSON rather than being
+        handed index.html, otherwise a typo'd endpoint looks like a broken
+        page instead of a missing route.
+        """
+        if full_path == "api" or full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="not found")
+
+        # Serve real files that live at the dist root (favicon, manifest, ...)
+        candidate = (_FRONTEND / full_path).resolve()
+        if full_path and candidate.is_file() and candidate.is_relative_to(_FRONTEND):
+            return FileResponse(candidate)
+
+        return FileResponse(_FRONTEND / "index.html")
