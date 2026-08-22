@@ -286,9 +286,9 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
           confirmation you have to type out. No account, no cloud, no upload.
         </p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="#download">
+          <a class="btn btn-primary" id="dl-hero" href="#download">
             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1v8.6l3-3 1 1.4-5 5-5-5 1-1.4 3 3V1h2zM2 13h12v2H2z"/></svg>
-            Download free
+            <span id="dl-hero-label">Download free</span>
           </a>
           <a class="btn btn-ghost" href="https://github.com/thisisankit27/android-backup-manager">View source</a>
         </div>
@@ -463,8 +463,9 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
             <h3>Windows</h3>
           </div>
           <p class="muted" style="font-size:.92rem">Windows 10 or 11, 64-bit. Standard installer with Start menu shortcut.</p>
-          <a class="btn btn-primary" href="https://github.com/thisisankit27/android-backup-manager/releases/latest">Download for Windows</a>
-          <span class="meta">.exe installer · ~45 MB</span>
+          <a class="btn btn-primary" id="dl-win"
+             href="https://github.com/thisisankit27/android-backup-manager/releases/latest">Download for Windows</a>
+          <span class="meta" id="meta-win">.exe installer</span>
         </div>
         <div class="dl">
           <div class="os">
@@ -472,8 +473,9 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
             <h3>Ubuntu &amp; Debian</h3>
           </div>
           <p class="muted" style="font-size:.92rem">Ubuntu 22.04+ or Debian, 64-bit. Sets up USB permissions for you.</p>
-          <a class="btn btn-primary" href="https://github.com/thisisankit27/android-backup-manager/releases/latest">Download .deb</a>
-          <span class="meta">.deb package · ~43 MB</span>
+          <a class="btn btn-primary" id="dl-deb"
+             href="https://github.com/thisisankit27/android-backup-manager/releases/latest">Download .deb</a>
+          <span class="meta" id="meta-deb">.deb package</span>
         </div>
       </div>
 
@@ -591,23 +593,72 @@ footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted);font-s
     cio.observe(el);
   }
 
-  /* Real download count from GitHub Releases.
-     Shown only when there is something true to show -- no seeded baseline. */
-  var out = document.getElementById('dlcount');
-  if (out){
-    fetch('https://api.github.com/repos/thisisankit27/android-backup-manager/releases')
-      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function(rels){
-        var n = rels.reduce(function(sum, rel){
-          return sum + (rel.assets || []).reduce(function(a, x){ return a + (x.download_count || 0); }, 0);
-        }, 0);
+  /* ---------------------------------------------------------------------
+     Releases: point the buttons straight at the installer, show the real
+     version and size, and lead with the visitor's own platform.
+
+     Buttons ship pointing at the releases page, so if this request fails
+     or is rate-limited they stay useful instead of becoming dead links.
+     Asset filenames carry the version, so the /releases/latest/download/
+     shortcut cannot be used -- the real URL has to be resolved.
+     --------------------------------------------------------------------- */
+  var REPO = 'thisisankit27/android-backup-manager';
+
+  function mb(bytes){ return Math.round(bytes / 1048576) + ' MB'; }
+
+  function isWindows(){
+    var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    return /win/i.test(p);
+  }
+  function isLinux(){
+    var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    return /linux|x11|ubuntu/i.test(p) && !/android/i.test(navigator.userAgent);
+  }
+
+  fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(rel){
+      var assets = rel.assets || [];
+      var win = assets.filter(function(a){ return /\.exe$/i.test(a.name); })[0];
+      var deb = assets.filter(function(a){ return /\.deb$/i.test(a.name); })[0];
+      var version = (rel.tag_name || '').replace(/^v/, '');
+
+      function wire(btnId, metaId, asset, label){
+        var btn = document.getElementById(btnId);
+        var meta = document.getElementById(metaId);
+        if (!btn || !asset) return;
+        btn.href = asset.browser_download_url;
+        btn.setAttribute('download', asset.name);
+        if (meta) meta.textContent = label + ' · ' + mb(asset.size) +
+          (version ? ' · v' + version : '');
+      }
+      wire('dl-win', 'meta-win', win, '.exe installer');
+      wire('dl-deb', 'meta-deb', deb, '.deb package');
+
+      /* Hero button downloads the visitor's platform directly; on anything
+         else it keeps scrolling to the section so both stay reachable. */
+      var hero = document.getElementById('dl-hero');
+      var heroLabel = document.getElementById('dl-hero-label');
+      var pick = isWindows() ? win : isLinux() ? deb : null;
+      if (hero && pick){
+        hero.href = pick.browser_download_url;
+        hero.setAttribute('download', pick.name);
+        if (heroLabel) heroLabel.textContent =
+          'Download for ' + (isWindows() ? 'Windows' : 'Ubuntu') +
+          (version ? ' — v' + version : '');
+      }
+
+      /* Real download total. Shown only when non-zero: no seeded baseline. */
+      var out = document.getElementById('dlcount');
+      if (out){
+        var n = assets.reduce(function(a, x){ return a + (x.download_count || 0); }, 0);
         if (n > 0){
           out.textContent = n.toLocaleString() + (n === 1 ? ' download so far.' : ' downloads so far.');
           out.hidden = false;
         }
-      })
-      .catch(function(){ /* offline or rate-limited: say nothing rather than guess */ });
-  }
+      }
+    })
+    .catch(function(){ /* offline, rate-limited, or no release yet: links stay as shipped */ });
 })();
 </script>
 </body>
