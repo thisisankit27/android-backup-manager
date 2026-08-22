@@ -71,7 +71,18 @@ export interface JobStatus {
   error: string | null;
 }
 
+export interface AdbStatus {
+  found: boolean;
+  path: string | null;
+  source: "override" | "path" | "managed" | null;
+  hint: string | null;
+  download_url: string | null;
+  env_override: string;
+}
+
 export const api = {
+  adbStatus: () => req<AdbStatus>("/adb/status"),
+  installAdb: () => req<{ job_id: string }>("/adb/install", { method: "POST" }),
   deviceStatus: () => req<DeviceStatus>("/device/status"),
   startDiscovery: () => req<{ job_id: string }>("/discovery/start", { method: "POST" }),
   getDiscovery: (id: string) => req<DiscoveryResult>(`/discovery/${id}`),
