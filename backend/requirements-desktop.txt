@@ -1,0 +1,6 @@
+# Desktop app extras (on top of requirements.txt).
+# pywebview renders the UI in a native window: Edge WebView2 on Windows,
+# WebKitGTK on Linux. The GTK backend needs system packages that pip cannot
+# install -- see packaging/README.md.
+pywebview>=5.0
+pyinstaller>=6.6
