@@ -1,0 +1,162 @@
+name: Release
+
+# PyInstaller cannot cross-compile, so each platform is built on its own
+# runner and the artifacts are attached to a single GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g. 0.1.0), for a dry run without tagging"
+        required: true
+        default: "0.0.0-dev"
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # pywebview's GTK backend needs PyGObject, which builds against these.
+      # WebKit itself is not bundled -- it stays a runtime dependency of the
+      # .deb -- but the typelibs must be present to build against.
+      - name: Install GTK/WebKit build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgirepository1.0-dev libcairo2-dev pkg-config \
+            gir1.2-webkit2-4.1 libwebkit2gtk-4.1-dev \
+            python3-dev build-essential
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-desktop.txt
+          pip install pygobject
+
+      - name: Build bundle
+        run: python packaging/build.py
+
+      - name: Build .deb
+        run: packaging/linux/build_deb.sh "${{ needs.version.outputs.version }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: packaging/installer-output/*.deb
+          if-no-files-found: error
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-desktop.txt
+
+      - name: Build bundle
+        run: python packaging/build.py
+
+      # Inno Setup ships on the windows-latest image; fall back to choco if
+      # that ever stops being true.
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          & $iscc "/DAppVersion=${{ needs.version.outputs.version }}" packaging\windows\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: packaging/installer-output/*.exe
+          if-no-files-found: error
+
+  release:
+    needs: [version, linux, windows]
+    runs-on: ubuntu-latest
+    # Only publish a Release for a real tag; workflow_dispatch is a dry run
+    # that just leaves the artifacts attached to the workflow run.
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/linux-deb/*.deb
+            artifacts/windows-installer/*.exe
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            **Windows** — download the `.exe` and run it.
+            Windows will show *"Windows protected your PC"* because the
+            installer is not code-signed. Click **More info → Run anyway**.
+
+            **Ubuntu / Debian** — download the `.deb` and:
+
+            ```
+            sudo apt install ./android-backup-manager_${{ needs.version.outputs.version }}_amd64.deb
+            ```
+
+            This installs udev rules so `adb` can reach your phone without
+            `sudo`. Replug the phone afterwards.
+
+            ## Requirements
+
+            `adb` must be available. On Ubuntu the package pulls it in via
+            Recommends; on Windows install Google's platform-tools, and note
+            that many phones need their manufacturer's USB driver.
+
+            Everything runs on your machine. Nothing is uploaded anywhere.
